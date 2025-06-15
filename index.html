@@ -3,123 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Học Từ Vựng Thông Minh</title>
+    <title>Học Từ Vựng Thông Minh</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1 class="title">🧠 Hệ Thống Học Từ Vựng Thông Minh</h1>
-            <p class="subtitle">Học từ vựng Tiếng Anh hiệu quả với công nghệ thích ứng</p>
+    <div class="mobile-container">
+        <!-- Header -->
+        <header class="mobile-header">
+            <h1 class="app-title">📚 Học Từ Vựng</h1>
+            <div class="header-stats">
+                <span id="word-counter" class="word-counter">0/0</span>
+                <span id="accuracy-display" class="accuracy-display">0%</span>
+            </div>
         </header>
 
-        <div class="file-upload-section">
-            <label for="file-input" class="file-upload-label">
-                📁 Chọn file từ vựng (word.txt)
-            </label>
-            <input type="file" id="file-input" accept=".txt" class="file-input">
-            <button id="load-demo" class="demo-button">🎮 Dùng từ vựng mẫu</button>
-        </div>
-
-        <div class="system-status" id="system-status" style="display: none;">
-            <div class="status-grid">
-                <div class="status-item">
-                    <span class="status-label">Tổng từ vựng</span>
-                    <span id="total-words" class="status-value">0</span>
-                </div>
-                <div class="status-item">
-                    <span class="status-label">Đã hoàn thành</span>
-                    <span id="completed-words" class="status-value">0</span>
-                </div>
-                <div class="status-item">
-                    <span class="status-label">Còn lại</span>
-                    <span id="remaining-words" class="status-value">0</span>
-                </div>
-                <div class="status-item">
-                    <span class="status-label">Độ chính xác</span>
-                    <span id="accuracy-rate" class="status-value">0%</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="learning-interface" id="learning-interface" style="display: none;">
-            <div class="progress-indicator">
-                <div class="progress-bar">
-                    <div id="progress-fill" class="progress-fill"></div>
-                </div>
-                <span id="progress-text" class="progress-text">Đang tải từ vựng...</span>
-            </div>
-
-            <div class="word-presentation-area">
-                <div class="context-banner">
-                    <span id="context-type" class="context-type">Từ mới</span>
-                    <span id="word-counter" class="word-counter">1/10</span>
+        <!-- File Upload Section -->
+        <div class="file-upload-section" id="file-upload-section">
+            <div class="upload-card">
+                <div class="upload-icon">📁</div>
+                <h2>Tải từ vựng của bạn</h2>
+                <p>Chọn file word.txt để bắt đầu học</p>
+                
+                <label for="file-input" class="upload-btn">
+                    Chọn file từ vựng
+                </label>
+                <input type="file" id="file-input" accept=".txt" class="file-input">
+                
+                <div class="divider">
+                    <span>hoặc</span>
                 </div>
                 
-                <div class="target-word-display">
-                    <h2 id="target-word" class="target-word">Đang tải...</h2>
-                    <p id="word-instruction" class="word-instruction">Chọn nghĩa tiếng Việt đúng cho từ tiếng Anh này</p>
-                </div>
-
-                <div class="options-grid" id="options-grid">
-                    <!-- Các lựa chọn sẽ được tạo tự động -->
-                </div>
-            </div>
-
-            <div class="feedback-area">
-                <div id="feedback-message" class="feedback-message"></div>
-                <div id="learning-tip" class="learning-tip"></div>
+                <button id="load-demo" class="demo-btn">
+                    🎮 Dùng từ vựng mẫu
+                </button>
             </div>
         </div>
 
-        <div class="completion-modal" id="completion-modal" style="display: none;">
-            <div class="modal-content">
-                <h2 class="modal-title">🎉 Chúc mừng! 🎉</h2>
-                <div class="modal-stats">
-                    <p>Bạn đã hoàn thành tất cả từ vựng!</p>
-                    <div class="final-stats">
-                        <div class="stat-item">
-                            <span class="stat-number" id="final-total">0</span>
-                            <span class="stat-label">Tổng từ vựng</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number" id="final-attempts">0</span>
-                            <span class="stat-label">Tổng lần thử</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number" id="final-accuracy">0</span>
-                            <span class="stat-label">Độ chính xác %</span>
-                        </div>
+        <!-- Progress Bar -->
+        <div class="progress-container" id="progress-container" style="display: none;">
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+            <div class="progress-stats">
+                <span id="progress-text">Đang tải...</span>
+                <span id="remaining-count" class="remaining-count">0 còn lại</span>
+            </div>
+        </div>
+
+        <!-- Learning Interface -->
+        <div class="learning-interface" id="learning-interface" style="display: none;">
+            <!-- Word Display -->
+            <div class="word-card">
+                <div class="word-status">
+                    <span id="word-type" class="word-type">Từ mới</span>
+                </div>
+                <div class="english-word">
+                    <h2 id="target-word">LOADING</h2>
+                </div>
+                <p class="instruction">Chọn nghĩa tiếng Việt đúng</p>
+            </div>
+
+            <!-- Options Grid -->
+            <div class="options-container">
+                <div id="options-grid" class="options-grid">
+                    <!-- 6 options will be generated here -->
+                </div>
+            </div>
+
+            <!-- Feedback Area -->
+            <div class="feedback-container" id="feedback-container">
+                <div id="feedback-message" class="feedback-message"></div>
+                <div id="correct-answer" class="correct-answer"></div>
+            </div>
+        </div>
+
+        <!-- Completion Modal -->
+        <div class="completion-overlay" id="completion-modal" style="display: none;">
+            <div class="completion-card">
+                <div class="completion-icon">🎉</div>
+                <h2>Xuất sắc!</h2>
+                <p>Bạn đã hoàn thành tất cả từ vựng!</p>
+                
+                <div class="final-stats">
+                    <div class="stat-row">
+                        <span class="stat-label">Tổng từ vựng:</span>
+                        <span id="final-total" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Tổng lần thử:</span>
+                        <span id="final-attempts" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Độ chính xác:</span>
+                        <span id="final-accuracy" class="stat-value">0%</span>
                     </div>
                 </div>
-                <button id="restart-learning" class="modal-button">🔄 Học lại từ đầu</button>
+                
+                <button id="restart-learning" class="restart-btn">
+                    🔄 Học lại từ đầu
+                </button>
             </div>
         </div>
 
-        <div class="system-controls" id="system-controls" style="display: none;">
-            <button id="pause-learning" class="control-btn secondary">⏸️ Tạm dừng</button>
-            <button id="restart-session" class="control-btn tertiary">🔄 Bắt đầu lại</button>
+        <!-- Control Buttons -->
+        <div class="control-panel" id="control-panel" style="display: none;">
+            <button id="pause-learning" class="control-btn pause-btn">
+                ⏸️ Tạm dừng
+            </button>
+            <button id="restart-session" class="control-btn restart-btn">
+                🔄 Bắt đầu lại
+            </button>
         </div>
 
-        <div class="pedagogical-insights">
-            <h3>💡 Phương pháp học thông minh</h3>
-            <div class="insights-grid">
-                <div class="insight-card">
-                    <h4>🎯 Học tuần tự thông minh</h4>
-                    <p>Từ được trả lời đúng sẽ không xuất hiện lại. Từ sai sẽ được lặp lại sau khi học các từ khác.</p>
-                </div>
-                <div class="insight-card">
-                    <h4>🔄 Tự động tiếp tục</h4>
-                    <p>Hệ thống tự động chuyển sang từ tiếp theo, giúp bạn tập trung hoàn toàn vào việc học.</p>
-                </div>
-                <div class="insight-card">
-                    <h4>🧩 Không lặp lại từ đúng</h4>
-                    <p>Một khi trả lời đúng, từ đó sẽ được đánh dấu hoàn thành và không xuất hiện lại.</p>
-                </div>
-                <div class="insight-card">
-                    <h4>📈 Theo dõi tiến độ</h4>
-                    <p>Thanh tiến độ và thống kê giúp bạn biết rõ đã học được bao nhiêu từ.</p>
-                </div>
+        <!-- Bottom Info -->
+        <div class="bottom-info">
+            <div class="info-card">
+                <h3>💡 Cách học hiệu quả</h3>
+                <ul>
+                    <li>Từ trả lời đúng sẽ không xuất hiện lại</li>
+                    <li>Từ trả lời sai sẽ được lặp lại sau</li>
+                    <li>Hệ thống tự động chuyển sang từ tiếp theo</li>
+                    <li>Tập trung học những từ chưa biết</li>
+                </ul>
             </div>
         </div>
     </div>

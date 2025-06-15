@@ -39,6 +39,7 @@ class VietnameseVocabularyLearner {
     }
 
     this.initializeEventListeners()
+    this.setupMobileOptimizations()
   }
 
   initializeEventListeners() {
@@ -67,6 +68,20 @@ class VietnameseVocabularyLearner {
     })
   }
 
+  setupMobileOptimizations() {
+    // Prevent zoom on input focus
+    const viewport = document.querySelector('meta[name="viewport"]')
+    if (viewport) {
+      viewport.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no")
+    }
+
+    // Prevent pull-to-refresh
+    document.body.style.overscrollBehavior = "none"
+
+    // Add touch feedback
+    document.addEventListener("touchstart", () => {}, { passive: true })
+  }
+
   async handleFileUpload(file) {
     if (!file) return
 
@@ -74,9 +89,9 @@ class VietnameseVocabularyLearner {
       const text = await this.readFileAsText(file)
       this.parseVocabularyFile(text)
       this.showFeedback("📁 Tải file thành công! Bắt đầu học ngay!", "success")
-      this.startLearningSession()
+      setTimeout(() => this.startLearningSession(), 1000)
     } catch (error) {
-      this.showFeedback("❌ Lỗi tải file. Vui lòng kiểm tra định dạng!", "error")
+      this.showFeedback("❌ Lỗi tải file!", "error")
       console.error("File loading error:", error)
     }
   }
@@ -126,8 +141,8 @@ class VietnameseVocabularyLearner {
       const response = await fetch("word.txt")
       const text = await response.text()
       this.parseVocabularyFile(text)
-      this.showFeedback("🎮 Đã tải từ vựng mẫu! Bắt đầu học ngay!", "success")
-      this.startLearningSession()
+      this.showFeedback("🎮 Tải từ vựng mẫu thành công!", "success")
+      setTimeout(() => this.startLearningSession(), 1000)
     } catch (error) {
       this.showFeedback("❌ Không thể tải từ vựng mẫu!", "error")
       console.error("Demo loading error:", error)
@@ -141,12 +156,12 @@ class VietnameseVocabularyLearner {
     }
 
     // Hiển thị giao diện học tập
-    document.getElementById("system-status").style.display = "block"
-    document.getElementById("learning-interface").style.display = "block"
-    document.getElementById("system-controls").style.display = "flex"
-    document.querySelector(".file-upload-section").style.display = "none"
+    document.getElementById("file-upload-section").style.display = "none"
+    document.getElementById("progress-container").style.display = "block"
+    document.getElementById("learning-interface").style.display = "flex"
+    document.getElementById("control-panel").style.display = "flex"
 
-    this.updateSystemStatus()
+    this.updateAllDisplays()
     this.presentNextWord()
   }
 
@@ -163,13 +178,12 @@ class VietnameseVocabularyLearner {
     this.learningState.currentWord = this.learningState.vocabularyQueue[0]
     this.learningState.currentPosition = this.learningState.totalWords - this.learningState.vocabularyQueue.length + 1
 
-    // Tạo các lựa chọn
+    // Tạo 6 lựa chọn thay vì 5
     this.generateOptionsWithDistractors(this.learningState.currentWord)
 
     // Cập nhật giao diện
     this.renderWordPresentation()
-    this.updateProgressIndicator()
-    this.updateSystemStatus()
+    this.updateAllDisplays()
   }
 
   generateOptionsWithDistractors(correctWord) {
@@ -181,9 +195,9 @@ class VietnameseVocabularyLearner {
     // Lọc ra các từ khác để làm đáp án sai
     const otherWords = allVocabulary.filter((word) => word.english !== correctWord.english)
 
-    // Xáo trộn và chọn 4 từ làm đáp án sai
+    // Xáo trộn và chọn 5 từ làm đáp án sai (tổng cộng 6 lựa chọn)
     const shuffledOthers = [...otherWords].sort(() => Math.random() - 0.5)
-    for (let i = 0; i < 4 && i < shuffledOthers.length; i++) {
+    for (let i = 0; i < 5 && i < shuffledOthers.length; i++) {
       options.push(shuffledOthers[i].vietnamese)
     }
 
@@ -200,23 +214,19 @@ class VietnameseVocabularyLearner {
     // Hiển thị từ tiếng Anh
     document.getElementById("target-word").textContent = word.english.toUpperCase()
 
-    // Cập nhật bộ đếm từ
-    document.getElementById("word-counter").textContent =
-      `${this.learningState.currentPosition}/${this.learningState.totalWords}`
-
     // Xác định loại từ
-    const contextType = document.getElementById("context-type")
+    const wordType = document.getElementById("word-type")
     const isRetry = Array.from(this.learningState.completedWords).some((w) => w.english === word.english)
 
     if (isRetry) {
-      contextType.textContent = "Lặp lại"
-      contextType.style.background = "linear-gradient(45deg, #ff9800, #f57c00)"
+      wordType.textContent = "Lặp lại"
+      wordType.style.background = "linear-gradient(45deg, #ff9800, #f57c00)"
     } else {
-      contextType.textContent = "Từ mới"
-      contextType.style.background = "linear-gradient(45deg, #667eea, #764ba2)"
+      wordType.textContent = "Từ mới"
+      wordType.style.background = "linear-gradient(45deg, #667eea, #764ba2)"
     }
 
-    // Tạo các lựa chọn
+    // Tạo 6 lựa chọn
     const optionsGrid = document.getElementById("options-grid")
     optionsGrid.innerHTML = ""
 
@@ -224,6 +234,18 @@ class VietnameseVocabularyLearner {
       const optionCard = document.createElement("div")
       optionCard.className = "option-card"
       optionCard.textContent = option
+
+      // Thêm haptic feedback cho mobile
+      optionCard.addEventListener(
+        "touchstart",
+        () => {
+          if (navigator.vibrate) {
+            navigator.vibrate(10) // Rung nhẹ 10ms
+          }
+        },
+        { passive: true },
+      )
+
       optionCard.addEventListener("click", () => this.handleOptionSelection(option, optionCard))
       optionsGrid.appendChild(optionCard)
     })
@@ -239,6 +261,15 @@ class VietnameseVocabularyLearner {
 
     // Hiệu ứng thị giác
     optionElement.classList.add(isCorrect ? "correct" : "incorrect")
+
+    // Haptic feedback mạnh hơn cho kết quả
+    if (navigator.vibrate) {
+      if (isCorrect) {
+        navigator.vibrate([50, 50, 50]) // Rung 3 lần ngắn
+      } else {
+        navigator.vibrate(200) // Rung dài
+      }
+    }
 
     // Cập nhật thống kê
     this.learningState.totalAttempts++
@@ -277,48 +308,52 @@ class VietnameseVocabularyLearner {
     this.learningState.vocabularyQueue.push(currentWord)
 
     // Phản hồi khuyến khích
-    this.showFeedback(this.getRandomMessage("error"), "error", `Đáp án đúng là: "${this.learningState.correctAnswer}"`)
+    this.showFeedback(this.getRandomMessage("error"), "error", `Đáp án đúng: "${this.learningState.correctAnswer}"`)
   }
 
-  showFeedback(message, type, tip = "") {
+  showFeedback(message, type, correctAnswer = "") {
     const feedbackElement = document.getElementById("feedback-message")
-    const tipElement = document.getElementById("learning-tip")
+    const correctAnswerElement = document.getElementById("correct-answer")
 
     feedbackElement.textContent = message
     feedbackElement.className = `feedback-message ${type}`
-
-    tipElement.textContent = tip
+    correctAnswerElement.textContent = correctAnswer
 
     // Xóa phản hồi sau 1.5 giây
     setTimeout(() => {
       feedbackElement.textContent = ""
       feedbackElement.className = "feedback-message"
-      tipElement.textContent = ""
+      correctAnswerElement.textContent = ""
     }, 1500)
   }
 
-  updateProgressIndicator() {
-    const completed = this.learningState.completedWords.size
-    const total = this.learningState.totalWords
-    const progress = total > 0 ? (completed / total) * 100 : 0
-
-    document.getElementById("progress-fill").style.width = `${progress}%`
-    document.getElementById("progress-text").textContent =
-      `Tiến độ: ${completed}/${total} từ đã hoàn thành (${Math.round(progress)}%)`
+  updateAllDisplays() {
+    this.updateHeaderStats()
+    this.updateProgressIndicator()
   }
 
-  updateSystemStatus() {
+  updateHeaderStats() {
     const completed = this.learningState.completedWords.size
-    const remaining = this.learningState.vocabularyQueue.length
+    const total = this.learningState.totalWords
     const accuracy =
       this.learningState.totalAttempts > 0
         ? Math.round((this.learningState.correctAttempts / this.learningState.totalAttempts) * 100)
         : 0
 
-    document.getElementById("total-words").textContent = this.learningState.totalWords
-    document.getElementById("completed-words").textContent = completed
-    document.getElementById("remaining-words").textContent = remaining
-    document.getElementById("accuracy-rate").textContent = `${accuracy}%`
+    document.getElementById("word-counter").textContent = `${this.learningState.currentPosition}/${total}`
+    document.getElementById("accuracy-display").textContent = `${accuracy}%`
+  }
+
+  updateProgressIndicator() {
+    const completed = this.learningState.completedWords.size
+    const total = this.learningState.totalWords
+    const remaining = this.learningState.vocabularyQueue.length
+    const progress = total > 0 ? (completed / total) * 100 : 0
+
+    document.getElementById("progress-fill").style.width = `${progress}%`
+    document.getElementById("progress-text").textContent =
+      `Đã hoàn thành ${completed}/${total} từ (${Math.round(progress)}%)`
+    document.getElementById("remaining-count").textContent = `${remaining} còn lại`
   }
 
   showCompletionModal() {
@@ -330,9 +365,14 @@ class VietnameseVocabularyLearner {
 
     document.getElementById("final-total").textContent = this.learningState.totalWords
     document.getElementById("final-attempts").textContent = this.learningState.totalAttempts
-    document.getElementById("final-accuracy").textContent = accuracy
+    document.getElementById("final-accuracy").textContent = `${accuracy}%`
 
     modal.style.display = "flex"
+
+    // Haptic feedback cho hoàn thành
+    if (navigator.vibrate) {
+      navigator.vibrate([100, 50, 100, 50, 100]) // Rung mừng
+    }
   }
 
   hideCompletionModal() {

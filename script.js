@@ -1,557 +1,547 @@
-// Global Firebase variables (will be initialized after DOMContentLoaded)
-let db;
-let auth;
-let userId = null; // Stores the current user's ID
-let isAuthReady = false; // Flag to indicate Firebase auth is ready
-
-// Global variables for game state
-let allLessons = []; // Stores all loaded lessons: [{title, vocab, filename, playCount}]
-let currentLesson = null; // Stores the currently selected lesson object {title, vocab, filename, playCount}
-let vocabulary = []; // Stores all word-meaning pairs for the current lesson
-
-let selectedEnglishCard = null;    // Stores the currently selected English card element
-let selectedVietnameseCard = null; // Stores the currently selected Vietnamese card element
-
-let score = 0;       // Number of correct matches for the current lesson
-let attempts = 0;    // Total attempts made (successful or not) for the current lesson
-let matchesFound = 0; // Tracks how many pairs have been successfully matched in current lesson
-
-// DOM elements
-const mainTitleElement = document.getElementById('main-title');
-const userIdSpan = document.getElementById('user-id-span');
-const lessonSelectionArea = document.getElementById('lesson-selection-area');
-const lessonsListContainer = document.getElementById('lessons-list');
-const loadingLessonsMessage = document.getElementById('loading-lessons-message');
-const gameContainer = document.getElementById('game-container');
-const englishWordsContainer = document.getElementById('english-words');
-const vietnameseMeaningsContainer = document.getElementById('vietnamese-meanings');
-const feedbackMessageElement = document.getElementById('feedback-message');
-const scoreDisplayElement = document.getElementById('score-display');
-const resetButton = document.getElementById('reset-button');
-const backToLessonsButton = document.getElementById('back-to-lessons-button');
-
-
-// Feedback messages for correct and incorrect attempts
-const correctFeedback = [
-    "Excellent!", "You got it!", "Fantastic work!", "Bravo!",
-    "Perfect match!", "Superb!", "Nailed it!", "Brilliant!"
-];
-
-const incorrectFeedback = [
-    "Oops, not quite! Keep trying!", "Almost there, give it another shot!",
-    "Don't worry, you'll get it!", "That's not it, but you're learning!",
-    "Try again, you can do it!", "A little off, keep practicing!",
-    "Keep pushing, you'll find it!", "Not the one, but every try helps!"
-];
-
-/**
- * Initializes Firebase Authentication and Firestore.
- * Sets up an auth state listener to get the user ID.
- */
-async function initializeFirebase() {
-    console.log("initializeFirebase: Starting Firebase initialization...");
-    let firebaseConfig = {};
-
-    // Get __app_id and __firebase_config from the Canvas environment
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    console.log("initializeFirebase: __app_id is:", appId);
-
-    try {
-        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-            firebaseConfig = JSON.parse(__firebase_config);
-            console.log("initializeFirebase: __firebase_config parsed successfully.");
-            // console.log("initializeFirebase: Firebase Config:", firebaseConfig); // Log for debugging, but be cautious with sensitive info
-        } else {
-            console.warn("initializeFirebase: __firebase_config is undefined or empty. Using empty config.");
-        }
-    } catch (e) {
-        console.error("initializeFirebase: Error parsing __firebase_config:", e);
-        feedbackMessageElement.textContent = 'Configuration error: Could not parse Firebase settings.';
-        loadingLessonsMessage.textContent = 'Configuration error: Could not parse Firebase settings.';
-        feedbackMessageElement.classList.add('incorrect');
-        return; // Stop initialization if config is bad
+class VietnameseVocabularyLearner {
+  constructor() {
+    // Trạng thái học tập
+    this.learningState = {
+      vocabularyQueue: [],
+      completedWords: new Set(),
+      currentWord: null,
+      currentOptions: [],
+      correctAnswer: "",
+      totalWords: 0,
+      totalAttempts: 0,
+      correctAttempts: 0,
+      currentPosition: 0,
+      isPaused: false,
+      currentLesson: null,
     }
 
+    // Danh sách bài học
+    this.lessons = []
+    this.lessonStats = this.loadLessonStats()
 
-    if (!window.firebase) {
-        console.error("initializeFirebase: Firebase SDK not loaded. Check script type='module' in index.html.");
-        feedbackMessageElement.textContent = 'Firebase SDK failed to load.';
-        loadingLessonsMessage.textContent = 'Firebase SDK failed to load.';
-        feedbackMessageElement.classList.add('incorrect');
-        return;
+    // Thông điệp phản hồi
+    this.feedbackMessages = {
+      success: [
+        "🎉 Tuyệt vời! Bạn đã trả lời đúng!",
+        "🌟 Xuất sắc! Tiếp tục như vậy!",
+        "✨ Rất tốt! Bạn đang học rất nhanh!",
+        "🎯 Chính xác! Bạn thật giỏi!",
+        "🚀 Tuyệt vời! Bạn đang tiến bộ!",
+        "💫 Hoàn hảo! Từ này bạn đã thuộc rồi!",
+        "🏆 Tài giỏi! Cố gắng tiếp nhé!",
+        "⭐ Giỏi lắm! Bạn học rất tốt!",
+      ],
+      error: [
+        "🤔 Chưa đúng rồi! Từ này sẽ xuất hiện lại sau!",
+        "💪 Gần đúng rồi! Bạn sẽ gặp lại từ này!",
+        "🎯 Đừng lo! Từ này sẽ được lặp lại!",
+        "🌈 Sai rồi! Hãy nhớ kỹ để lần sau đúng!",
+        "🎪 Không sao! Từ này sẽ quay lại sau!",
+        "🎨 Tiếp tục cố gắng! Bạn sẽ gặp lại từ này!",
+        "🎭 Chưa đúng! Từ này sẽ xuất hiện lại!",
+        "🎪 Đừng bỏ cuộc! Lần sau bạn sẽ đúng!",
+      ],
     }
 
-    try {
-        const app = window.firebase.initializeApp(firebaseConfig);
-        db = window.firebase.getFirestore(app);
-        auth = window.firebase.getAuth(app);
-        console.log("initializeFirebase: Firebase app, db, auth initialized.");
+    this.initializeEventListeners()
+    this.setupMobileOptimizations()
+    this.loadAvailableLessons()
+  }
 
-        // Listen for authentication state changes
-        window.firebase.onAuthStateChanged(auth, async (user) => {
-            console.log("onAuthStateChanged: Auth state changed. User:", user ? user.uid : "null (anonymous sign-in attempt)");
-            if (user) {
-                // User is signed in
-                userId = user.uid;
-                userIdSpan.textContent = userId;
-                console.log("onAuthStateChanged: Firebase Auth Ready. User ID:", userId);
-            } else {
-                // User is signed out or not authenticated. Sign in anonymously.
-                try {
-                    // Use __initial_auth_token if provided, otherwise sign in anonymously
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await window.firebase.signInWithCustomToken(auth, __initial_auth_token);
-                        console.log("onAuthStateChanged: Signed in with custom token.");
-                    } else {
-                        await window.firebase.signInAnonymously(auth);
-                        console.log("onAuthStateChanged: Signed in anonymously.");
-                    }
-                    userId = auth.currentUser?.uid || crypto.randomUUID(); // Fallback for anonymous
-                    userIdSpan.textContent = userId;
-                    console.log("onAuthStateChanged: Firebase Auth Ready. User ID (after anonymous/custom sign-in):", userId);
-                } catch (anonError) {
-                    console.error("onAuthStateChanged: Error signing in anonymously/custom token:", anonError);
-                    userIdSpan.textContent = "Error";
-                    feedbackMessageElement.textContent = `Authentication error: ${anonError.message}`;
-                    loadingLessonsMessage.textContent = `Authentication error: ${anonError.message}`;
-                    feedbackMessageElement.classList.add('incorrect');
-                }
-            }
-            isAuthReady = true;
-            console.log("onAuthStateChanged: isAuthReady set to true. Calling loadAllLessons.");
-            // Once auth is ready, load all lessons and their play counts
-            await loadAllLessons();
-        });
-    } catch (error) {
-        console.error("initializeFirebase: Error initializing Firebase app or services:", error);
-        feedbackMessageElement.textContent = 'Failed to initialize application services.';
-        loadingLessonsMessage.textContent = 'Failed to initialize application services.';
-        feedbackMessageElement.classList.add('incorrect');
+  initializeEventListeners() {
+    // File upload
+    document.getElementById("file-input").addEventListener("change", (e) => {
+      this.handleFileUpload(e.target.files[0])
+    })
+
+    // Navigation
+    document.getElementById("back-to-lessons").addEventListener("click", () => {
+      this.showLessonSelection()
+    })
+
+    document.getElementById("back-to-lessons-modal").addEventListener("click", () => {
+      this.hideCompletionModal()
+      this.showLessonSelection()
+    })
+
+    // Control buttons
+    document.getElementById("pause-learning").addEventListener("click", () => {
+      this.togglePause()
+    })
+
+    document.getElementById("restart-session").addEventListener("click", () => {
+      this.restartSession()
+    })
+
+    document.getElementById("restart-learning").addEventListener("click", () => {
+      this.restartSession()
+      this.hideCompletionModal()
+    })
+  }
+
+  setupMobileOptimizations() {
+    const viewport = document.querySelector('meta[name="viewport"]')
+    if (viewport) {
+      viewport.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no")
     }
-}
 
-/**
- * Fetches lesson data from 'wordN.txt' files sequentially.
- * Parses each file, extracts the title (first line), and vocabulary.
- */
-async function loadAllLessons() {
-    console.log("loadAllLessons: Starting lesson loading process.");
-    lessonsListContainer.innerHTML = ''; // Clear previous lesson list
-    loadingLessonsMessage.textContent = 'Loading lessons...';
-    loadingLessonsMessage.style.display = 'block'; // Show loading message
+    document.body.style.overscrollBehavior = "none"
+    document.addEventListener("touchstart", () => {}, { passive: true })
+  }
 
-    allLessons = []; // Reset lessons array
-    let lessonIndex = 1;
-    let foundLessons = false;
+  // Lesson Management
+  async loadAvailableLessons() {
+    const loadingElement = document.getElementById("loading-lessons")
+    const lessonsGrid = document.getElementById("lessons-grid")
+    const noLessonsElement = document.getElementById("no-lessons")
 
+    loadingElement.style.display = "block"
+    lessonsGrid.style.display = "none"
+    noLessonsElement.style.display = "none"
+
+    this.lessons = []
+    let lessonNumber = 1
+
+    // Try to load lessons starting from word1.txt
     while (true) {
-        const filename = `word${lessonIndex}.txt`;
-        console.log(`loadAllLessons: Attempting to fetch ${filename}`);
-        try {
-            const response = await fetch(filename);
+      try {
+        const response = await fetch(`word${lessonNumber}.txt`)
+        if (!response.ok) break
 
-            if (!response.ok) {
-                // If 404 Not Found, assume no more lesson files
-                if (response.status === 404) {
-                    console.log(`loadAllLessons: No more lesson files found after ${filename} (404). Breaking loop.`);
-                    break;
-                } else {
-                    throw new Error(`HTTP error! Status: ${response.status} for ${filename}`);
-                }
-            }
-
-            const text = await response.text();
-            const lines = text.split('\n').filter(line => line.trim() !== '');
-            console.log(`loadAllLessons: Successfully fetched ${filename}. Lines count: ${lines.length}`);
-
-
-            if (lines.length === 0) {
-                console.warn(`loadAllLessons: Skipping empty lesson file: ${filename}`);
-                lessonIndex++;
-                continue;
-            }
-
-            const title = lines[0].trim(); // First line is the title
-            const vocab = lines.slice(1).map((line, index) => {
-                const parts = line.split(' - ');
-                if (parts.length === 2) {
-                    return {
-                        english: parts[0].trim(),
-                        vietnam: parts[1].trim(),
-                        id: `${filename}-word-${index}` // Unique ID for matching
-                    };
-                }
-                console.warn(`loadAllLessons: Skipping malformed vocabulary line in ${filename}: ${line}`);
-                return null;
-            }).filter(item => item !== null); // Filter out malformed vocabulary entries
-
-            if (vocab.length > 0) {
-                allLessons.push({
-                    title: title,
-                    vocab: vocab,
-                    filename: filename,
-                    playCount: 0 // Will be updated from Firestore
-                });
-                foundLessons = true;
-                console.log(`loadAllLessons: Added lesson "${title}" from ${filename} with ${vocab.length} words.`);
-            } else {
-                console.warn(`loadAllLessons: Lesson file ${filename} contains only a title or no valid vocabulary.`);
-            }
-
-            lessonIndex++;
-        } catch (error) {
-            console.error(`loadAllLessons: Error fetching lesson ${filename}:`, error);
-            // Stop if there's a serious network error or other issue
-            lessonsListContainer.textContent = `Error loading lessons: ${error.message}`;
-            loadingLessonsMessage.style.display = 'none'; // Hide loading message
-            break; // Stop trying to fetch more files on error
-        }
-    }
-
-    loadingLessonsMessage.style.display = 'none'; // Hide loading message
-    console.log(`loadAllLessons: Finished fetching lessons. Found ${allLessons.length} lessons. `);
-
-    if (foundLessons) {
-        console.log("loadAllLessons: Found lessons. Calling getLessonPlayCounts.");
-        await getLessonPlayCounts(); // Fetch play counts from Firestore after loading all lessons
-        // displayLessonSelection() is called inside getLessonPlayCounts now
-    } else {
-        lessonsListContainer.textContent = 'No lessons found. Please ensure wordN.txt files exist and are correctly formatted.';
-        console.log("loadAllLessons: No lessons found. Displaying message.");
-    }
-}
-
-/**
- * Fetches existing lesson play counts from Firestore for the current user.
- * Merges these counts into the `allLessons` array.
- */
-async function getLessonPlayCounts() {
-    console.log("getLessonPlayCounts: Attempting to fetch play counts.");
-    if (!isAuthReady || !userId || !db) {
-        console.warn("getLessonPlayCounts: Firebase not ready or user ID not available to fetch play counts. isAuthReady:", isAuthReady, "userId:", userId, "db:", db);
-        displayLessonSelection(); // Still try to display lessons even if counts can't be fetched
-        return;
-    }
-    // Define the path to the user's private lesson progress collection
-    // Ensure __app_id is correctly defined for the Firestore path
-    const lessonProgressRef = window.firebase.collection(db, `artifacts/${appId}/users/${userId}/lesson_progress`);
-    try {
-        const querySnapshot = await window.firebase.getDocs(lessonProgressRef);
-        const playCountsMap = new Map();
-        querySnapshot.forEach(doc => {
-            playCountsMap.set(doc.id, doc.data().playCount || 0); // doc.id is the filename
-        });
-        console.log("getLessonPlayCounts: Fetched play counts:", playCountsMap);
-
-        // Update allLessons with fetched play counts
-        allLessons.forEach(lesson => {
-            lesson.playCount = playCountsMap.has(lesson.filename) ? playCountsMap.get(lesson.filename) : 0;
-        });
-        console.log("getLessonPlayCounts: Updated allLessons with play counts.");
-        displayLessonSelection(); // Re-display lesson selection to show updated counts
-    } catch (error) {
-        console.error("getLessonPlayCounts: Error fetching lesson play counts:", error);
-        feedbackMessageElement.textContent = 'Could not load your lesson progress.';
-        displayLessonSelection(); // Display lessons even if counts failed to load
-    }
-}
-
-/**
- * Updates the play count for a specific lesson in Firestore.
- * @param {string} filename The filename of the lesson (used as document ID).
- */
-async function updateLessonPlayCount(filename) {
-    console.log("updateLessonPlayCount: Attempting to update play count for:", filename);
-    if (!isAuthReady || !userId || !db) {
-        console.warn("updateLessonPlayCount: Firebase not ready or user ID not available to update play count.");
-        return;
-    }
-    // Ensure __app_id is correctly defined for the Firestore path
-    const lessonDocRef = window.firebase.doc(db, `artifacts/${appId}/users/${userId}/lesson_progress`, filename);
-    try {
-        const docSnap = await window.firebase.getDoc(lessonDocRef);
-        if (docSnap.exists()) {
-            const currentCount = docSnap.data().playCount || 0;
-            await window.firebase.updateDoc(lessonDocRef, { playCount: currentCount + 1 });
-            console.log(`updateLessonPlayCount: Updated play count for ${filename} to ${currentCount + 1}`);
+        const text = await response.text()
+        const lesson = this.parseLessonFile(text, `word${lessonNumber}.txt`)
+        
+        if (lesson) {
+          this.lessons.push(lesson)
+          lessonNumber++
         } else {
-            await window.firebase.setDoc(lessonDocRef, { playCount: 1 });
-            console.log(`updateLessonPlayCount: Initialized play count for ${filename} to 1`);
+          break
         }
-        // Update local lesson data immediately
-        const lessonToUpdate = allLessons.find(lesson => lesson.filename === filename);
-        if (lessonToUpdate) {
-            lessonToUpdate.playCount = (lessonToUpdate.playCount || 0) + 1;
-            // No need to call displayLessonSelection here if the user is still in game
-            // The counts will be reloaded and displayed when they go back to the lesson list.
-        }
-    } catch (error) {
-        console.error("updateLessonPlayCount: Error updating lesson play count:", error);
-        feedbackMessageElement.textContent = 'Could not save lesson progress.';
-    }
-}
-
-/**
- * Displays the lesson selection screen and populates it with available lessons.
- */
-function displayLessonSelection() {
-    console.log("displayLessonSelection: Showing lesson selection UI.");
-    mainTitleElement.textContent = 'Vocabulary Matcher'; // Reset main title
-    lessonSelectionArea.classList.remove('hidden');
-    gameContainer.classList.add('hidden'); // Ensure game container is hidden
-    lessonsListContainer.innerHTML = ''; // Clear existing lesson cards
-
-    if (allLessons.length === 0) {
-        lessonsListContainer.textContent = 'No lessons available.';
-        console.log("displayLessonSelection: No lessons in allLessons array.");
-        return;
+      } catch (error) {
+        break
+      }
     }
 
-    allLessons.forEach(lesson => {
-        const lessonCard = document.createElement('div');
-        lessonCard.classList.add('lesson-card');
-        lessonCard.innerHTML = `
-            <h3>${lesson.title}</h3>
-            <p>Played: ${lesson.playCount || 0} times</p>
-        `;
-        lessonCard.addEventListener('click', () => startLesson(lesson));
-        lessonsListContainer.appendChild(lessonCard);
-    });
-    console.log(`displayLessonSelection: Rendered ${allLessons.length} lesson cards.`);
-}
+    loadingElement.style.display = "none"
 
-/**
- * Starts a selected lesson, transitioning from lesson selection to game view.
- * @param {Object} lesson The lesson object to start.
- */
-function startLesson(lesson) {
-    console.log("startLesson: Starting lesson:", lesson.title);
-    currentLesson = lesson;
-    vocabulary = lesson.vocab; // Set global vocabulary to the selected lesson's vocab
-
-    mainTitleElement.textContent = currentLesson.title; // Update main title to lesson title
-    lessonSelectionArea.classList.add('hidden'); // Hide lesson selection
-    gameContainer.classList.remove('hidden'); // Show game container
-
-    initializeGame(); // Initialize the game for the selected lesson
-}
-
-
-/**
- * Shuffles an array randomly using the Fisher-Yates algorithm.
- * @param {Array} array The array to shuffle.
- * @returns {Array} The shuffled array.
- */
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]]; // Swap elements
-    }
-    return array;
-}
-
-/**
- * Creates and returns a card HTML element.
- * @param {string} text The text to display on the card.
- * @param {'english'|'vietnamese'} type The type of card (for styling).
- * @param {string} dataId The unique ID to associate with the card for matching.
- * @returns {HTMLElement} The created card div element.
- */
-function createCard(text, type, dataId) {
-    const card = document.createElement('div');
-    card.classList.add('card', type);
-    card.textContent = text;
-    card.dataset.id = dataId; // Store the matching ID in a data attribute
-    card.addEventListener('click', handleCardClick); // Add click listener
-    return card;
-}
-
-/**
- * Renders the shuffled English words and Vietnamese meanings to the DOM.
- */
-function renderCards() {
-    console.log("renderCards: Rendering new set of cards.");
-    // Clear previous cards
-    englishWordsContainer.innerHTML = '<h2>English Words</h2>';
-    vietnameseMeaningsContainer.innerHTML = '<h2>Vietnamese Meanings</h2>';
-
-    // Shuffle vocabulary items for both lists independently
-    // Create new arrays of just the English words and Vietnamese meanings with their IDs
-    const englishWordCards = shuffleArray(vocabulary.map(item => ({ text: item.english, id: item.id })));
-    const vietnameseMeaningCards = shuffleArray(vocabulary.map(item => ({ text: item.vietnam, id: item.id })));
-
-    // Append English word cards
-    englishWordCards.forEach(word => {
-        englishWordsContainer.appendChild(createCard(word.text, 'english', word.id));
-    });
-
-    // Append Vietnamese meaning cards
-    vietnameseMeaningCards.forEach(meaning => {
-        vietnameseMeaningsContainer.appendChild(createCard(meaning.text, 'vietnamese', meaning.id));
-    });
-    console.log(`renderCards: Rendered ${vocabulary.length} English and ${vocabulary.length} Vietnamese cards.`);
-}
-
-/**
- * Handles clicks on word and meaning cards.
- * Manages selection and triggers match checking.
- * @param {Event} event The click event.
- */
-function handleCardClick(event) {
-    const clickedCard = event.target;
-    console.log("handleCardClick: Card clicked:", clickedCard.textContent, clickedCard.dataset.id);
-
-    // Do nothing if the card is already matched or is not a card element
-    if (clickedCard.classList.contains('matched') || !clickedCard.classList.contains('card')) {
-        console.log("handleCardClick: Card already matched or not a valid card. Ignoring click.");
-        return;
-    }
-
-    // Determine if it's an English or Vietnamese card
-    if (clickedCard.classList.contains('english')) {
-        // Deselect previously selected English card if any
-        if (selectedEnglishCard) {
-            selectedEnglishCard.classList.remove('selected');
-        }
-        selectedEnglishCard = clickedCard;
-        console.log("handleCardClick: English card selected:", selectedEnglishCard.textContent);
-    } else if (clickedCard.classList.contains('vietnamese')) {
-        // Deselect previously selected Vietnamese card if any
-        if (selectedVietnameseCard) {
-            selectedVietnameseCard.classList.remove('selected');
-        }
-        selectedVietnameseCard = clickedCard;
-        console.log("handleCardClick: Vietnamese card selected:", selectedVietnameseCard.textContent);
-    }
-
-    clickedCard.classList.add('selected'); // Mark the clicked card as selected
-
-    // If both an English and a Vietnamese card are selected, check for a match
-    if (selectedEnglishCard && selectedVietnameseCard) {
-        console.log("handleCardClick: Both cards selected. Checking match in 500ms.");
-        // Delay checking to allow visual "selected" state to register
-        setTimeout(checkMatch, 500);
-    }
-}
-
-/**
- * Checks if the two selected cards form a correct match.
- * Updates score, provides feedback, and handles game state.
- */
-function checkMatch() {
-    attempts++; // Increment total attempts
-    console.log("checkMatch: Checking match. Attempt:", attempts);
-
-    const englishId = selectedEnglishCard.dataset.id;
-    const vietnameseId = selectedVietnameseCard.dataset.id;
-
-    if (englishId === vietnameseId) {
-        // Correct match!
-        score++;
-        matchesFound++;
-        updateFeedback(getRandomFeedback('correct'), 'correct');
-        console.log(`checkMatch: Correct match! ${selectedEnglishCard.textContent} - ${selectedVietnameseCard.textContent}. Matches found: ${matchesFound}/${vocabulary.length}`);
-
-
-        // Mark cards as matched and disable them
-        selectedEnglishCard.classList.remove('selected');
-        selectedVietnameseCard.classList.remove('selected');
-        selectedEnglishCard.classList.add('matched');
-        selectedVietnameseCard.classList.add('matched');
-
-        // Reset selections
-        selectedEnglishCard = null;
-        selectedVietnameseCard = null;
-
-        updateScoreDisplay();
-
-        // Check if all words have been matched
-        if (matchesFound === vocabulary.length) {
-            console.log("checkMatch: All words matched! Game completed.");
-            setTimeout(() => {
-                feedbackMessageElement.textContent = `🎉 Congratulations! You matched all ${vocabulary.length} words in ${attempts} attempts!`;
-                feedbackMessageElement.classList.remove('correct', 'incorrect');
-                feedbackMessageElement.classList.add('correct'); // Use correct style for celebration
-
-                // Update the lesson play count in Firestore
-                if (currentLesson) {
-                    updateLessonPlayCount(currentLesson.filename);
-                }
-            }, 700); // Delay celebratory message slightly
-        }
-
+    if (this.lessons.length > 0) {
+      this.renderLessons()
+      lessonsGrid.style.display = "grid"
     } else {
-        // Incorrect match
-        updateFeedback(getRandomFeedback('incorrect'), 'incorrect');
-        console.log(`checkMatch: Incorrect match. ${selectedEnglishCard.textContent} - ${selectedVietnameseCard.textContent}`);
-
-        // Briefly show the incorrect selection, then deselect
-        setTimeout(() => {
-            if (selectedEnglishCard) selectedEnglishCard.classList.remove('selected');
-            if (selectedVietnameseCard) selectedVietnameseCard.classList.remove('selected');
-            selectedEnglishCard = null;
-            selectedVietnameseCard = null;
-            console.log("checkMatch: Incorrect cards deselected.");
-        }, 800); // Keep selected state for a moment before resetting
+      noLessonsElement.style.display = "block"
     }
-}
+  }
 
-/**
- * Updates the feedback message displayed on the screen.
- * @param {string} message The message to display.
- * @param {'correct'|'incorrect'|''} type The type of feedback for styling.
- */
-function updateFeedback(message, type) {
-    // Clear previous feedback classes
-    feedbackMessageElement.classList.remove('correct', 'incorrect');
-    feedbackMessageElement.textContent = message;
-    if (type) {
-        feedbackMessageElement.classList.add(type);
+  parseLessonFile(text, filename) {
+    const lines = text.split("\n").filter((line) => line.trim())
+    if (lines.length < 2) return null
+
+    const title = lines[0].trim()
+    const vocabulary = []
+
+    for (let i = 1; i < lines.length; i++) {
+      const parts = lines[i].split(" - ")
+      if (parts.length === 2) {
+        vocabulary.push({
+          english: parts[0].trim().toLowerCase(),
+          vietnamese: parts[1].trim(),
+        })
+      }
     }
+
+    if (vocabulary.length === 0) return null
+
+    return {
+      filename,
+      title,
+      vocabulary,
+      wordCount: vocabulary.length,
+    }
+  }
+
+  renderLessons() {
+    const lessonsGrid = document.getElementById("lessons-grid")
+    lessonsGrid.innerHTML = ""
+
+    this.lessons.forEach((lesson, index) => {
+      const completionCount = this.lessonStats[lesson.filename] || 0
+      const lessonCard = this.createLessonCard(lesson, completionCount, index + 1)
+      lessonsGrid.appendChild(lessonCard)
+    })
+  }
+
+  createLessonCard(lesson, completionCount, lessonNumber) {
+    const card = document.createElement("div")
+    card.className = "lesson-card"
+    
+    card.innerHTML = `
+      <div class="lesson-header">
+        <div>
+          <div class="lesson-title">${lesson.title}</div>
+          <div class="lesson-info">
+            <span class="word-count">${lesson.wordCount} từ vựng</span>
+          </div>
+        </div>
+        <div class="lesson-badge">Bài ${lessonNumber}</div>
+      </div>
+      <div class="lesson-stats">
+        ${completionCount > 0 ? `<span class="completion-badge">Đã hoàn thành ${completionCount} lần</span>` : '<span style="color: #718096;">Chưa học</span>'}
+      </div>
+    `
+
+    card.addEventListener("click", () => {
+      this.startLesson(lesson)
+    })
+
+    return card
+  }
+
+  startLesson(lesson) {
+    this.learningState.currentLesson = lesson
+    this.parseVocabularyFromLesson(lesson)
+    this.showLearningInterface()
+    this.startLearningSession()
+  }
+
+  parseVocabularyFromLesson(lesson) {
+    const vocabulary = [...lesson.vocabulary]
+    this.shuffleArray(vocabulary)
+
+    this.learningState.vocabularyQueue = vocabulary
+    this.learningState.totalWords = vocabulary.length
+    this.learningState.completedWords.clear()
+    this.learningState.currentPosition = 0
+    this.learningState.totalAttempts = 0
+    this.learningState.correctAttempts = 0
+  }
+
+  async handleFileUpload(file) {
+    if (!file) return
+
+    try {
+      const text = await this.readFileAsText(file)
+      const lesson = this.parseLessonFile(text, file.name)
+      
+      if (!lesson) {
+        this.showFeedback("❌ File không đúng định dạng!", "error")
+        return
+      }
+
+      this.startLesson(lesson)
+    } catch (error) {
+      this.showFeedback("❌ Lỗi tải file!", "error")
+      console.error("File loading error:", error)
+    }
+  }
+
+  readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => resolve(e.target.result)
+      reader.onerror = (e) => reject(e)
+      reader.readAsText(file)
+    })
+  }
+
+  // UI Management
+  showLessonSelection() {
+    document.getElementById("lesson-selection").style.display = "flex"
+    document.getElementById("progress-container").style.display = "none"
+    document.getElementById("learning-interface").style.display = "none"
+    document.getElementById("control-panel").style.display = "none"
+    document.getElementById("back-to-lessons").style.display = "none"
+    document.getElementById("word-counter").style.display = "none"
+    document.getElementById("accuracy-display").style.display = "none"
+  }
+
+  showLearningInterface() {
+    document.getElementById("lesson-selection").style.display = "none"
+    document.getElementById("progress-container").style.display = "block"
+    document.getElementById("learning-interface").style.display = "flex"
+    document.getElementById("control-panel").style.display = "flex"
+    document.getElementById("back-to-lessons").style.display = "block"
+    document.getElementById("word-counter").style.display = "block"
+    document.getElementById("accuracy-display").style.display = "block"
+  }
+
+  startLearningSession() {
+    if (this.learningState.vocabularyQueue.length === 0) {
+      this.showFeedback("📝 Không có từ vựng để học!", "error")
+      return
+    }
+
+    // Update lesson info
+    const currentLesson = this.learningState.currentLesson
+    const completionCount = this.lessonStats[currentLesson.filename] || 0
+    
+    document.getElementById("current-lesson-title").textContent = currentLesson.title
+    document.getElementById("lesson-completion-count").textContent = `Lần thứ ${completionCount + 1}`
+
+    this.updateAllDisplays()
+    this.presentNextWord()
+  }
+
+  presentNextWord() {
+    if (this.learningState.isPaused) return
+
+    if (this.learningState.vocabularyQueue.length === 0) {
+      this.completeLesson()
+      return
+    }
+
+    this.learningState.currentWord = this.learningState.vocabularyQueue[0]
+    this.learningState.currentPosition = this.learningState.totalWords - this.learningState.vocabularyQueue.length + 1
+
+    this.generateOptionsWithDistractors(this.learningState.currentWord)
+    this.renderWordPresentation()
+    this.updateAllDisplays()
+  }
+
+  generateOptionsWithDistractors(correctWord) {
+    const options = [correctWord.vietnamese]
+    const allVocabulary = [...this.learningState.vocabularyQueue, ...Array.from(this.learningState.completedWords)]
+    const otherWords = allVocabulary.filter((word) => word.english !== correctWord.english)
+    const shuffledOthers = [...otherWords].sort(() => Math.random() - 0.5)
+    
+    for (let i = 0; i < 5 && i < shuffledOthers.length; i++) {
+      options.push(shuffledOthers[i].vietnamese)
+    }
+
+    this.shuffleArray(options)
+    this.learningState.currentOptions = options
+    this.learningState.correctAnswer = correctWord.vietnamese
+  }
+
+  renderWordPresentation() {
+    const word = this.learningState.currentWord
+
+    document.getElementById("target-word").textContent = word.english.toUpperCase()
+
+    const wordType = document.getElementById("word-type")
+    const isRetry = Array.from(this.learningState.completedWords).some((w) => w.english === word.english)
+
+    if (isRetry) {
+      wordType.textContent = "Lặp lại"
+      wordType.style.background = "linear-gradient(45deg, #ff9800, #f57c00)"
+    } else {
+      wordType.textContent = "Từ mới"
+      wordType.style.background = "linear-gradient(45deg, #667eea, #764ba2)"
+    }
+
+    const optionsGrid = document.getElementById("options-grid")
+    optionsGrid.innerHTML = ""
+
+    this.learningState.currentOptions.forEach((option) => {
+      const optionCard = document.createElement("div")
+      optionCard.className = "option-card"
+      optionCard.textContent = option
+
+      optionCard.addEventListener(
+        "touchstart",
+        () => {
+          if (navigator.vibrate) {
+            navigator.vibrate(10)
+          }
+        },
+        { passive: true },
+      )
+
+      optionCard.addEventListener("click", () => this.handleOptionSelection(option, optionCard))
+      optionsGrid.appendChild(optionCard)
+    })
+  }
+
+  handleOptionSelection(selectedOption, optionElement) {
+    const isCorrect = selectedOption === this.learningState.correctAnswer
+
+    document.querySelectorAll(".option-card").forEach((card) => {
+      card.classList.add("disabled")
+    })
+
+    optionElement.classList.add(isCorrect ? "correct" : "incorrect")
+
+    if (navigator.vibrate) {
+      if (isCorrect) {
+        navigator.vibrate([50, 50, 50])
+      } else {
+        navigator.vibrate(200)
+      }
+    }
+
+    this.learningState.totalAttempts++
+
+    if (isCorrect) {
+      this.handleCorrectAnswer()
+    } else {
+      this.handleIncorrectAnswer()
+    }
+
+    setTimeout(() => {
+      this.presentNextWord()
+    }, 1500)
+  }
+
+  handleCorrectAnswer() {
+    const currentWord = this.learningState.currentWord
+    this.learningState.correctAttempts++
+    this.learningState.vocabularyQueue.shift()
+    this.learningState.completedWords.add(currentWord)
+    this.showFeedback(this.getRandomMessage("success"), "success")
+  }
+
+  handleIncorrectAnswer() {
+    const currentWord = this.learningState.currentWord
+    this.learningState.vocabularyQueue.shift()
+    this.learningState.vocabularyQueue.push(currentWord)
+    this.showFeedback(this.getRandomMessage("error"), "error", `Đáp án đúng: "${this.learningState.correctAnswer}"`)
+  }
+
+  showFeedback(message, type, correctAnswer = "") {
+    const feedbackElement = document.getElementById("feedback-message")
+    const correctAnswerElement = document.getElementById("correct-answer")
+
+    feedbackElement.textContent = message
+    feedbackElement.className = `feedback-message ${type}`
+    correctAnswerElement.textContent = correctAnswer
+
+    setTimeout(() => {
+      feedbackElement.textContent = ""
+      feedbackElement.className = "feedback-message"
+      correctAnswerElement.textContent = ""
+    }, 1500)
+  }
+
+  updateAllDisplays() {
+    this.updateHeaderStats()
+    this.updateProgressIndicator()
+  }
+
+  updateHeaderStats() {
+    const completed = this.learningState.completedWords.size
+    const total = this.learningState.totalWords
+    const accuracy =
+      this.learningState.totalAttempts > 0
+        ? Math.round((this.learningState.correctAttempts / this.learningState.totalAttempts) * 100)
+        : 0
+
+    document.getElementById("word-counter").textContent = `${this.learningState.currentPosition}/${total}`
+    document.getElementById("accuracy-display").textContent = `${accuracy}%`
+  }
+
+  updateProgressIndicator() {
+    const completed = this.learningState.completedWords.size
+    const total = this.learningState.totalWords
+    const remaining = this.learningState.vocabularyQueue.length
+    const progress = total > 0 ? (completed / total) * 100 : 0
+
+    document.getElementById("progress-fill").style.width = `${progress}%`
+    document.getElementById("progress-text").textContent =
+      `Đã hoàn thành ${completed}/${total} từ (${Math.round(progress)}%)`
+    document.getElementById("remaining-count").textContent = `${remaining} còn lại`
+  }
+
+  completeLesson() {
+    const currentLesson = this.learningState.currentLesson
+    
+    // Update completion count
+    this.lessonStats[currentLesson.filename] = (this.lessonStats[currentLesson.filename] || 0) + 1
+    this.saveLessonStats()
+
+    this.showCompletionModal()
+
+    if (navigator.vibrate) {
+      navigator.vibrate([100, 50, 100, 50, 100])
+    }
+  }
+
+  showCompletionModal() {
+    const modal = document.getElementById("completion-modal")
+    const currentLesson = this.learningState.currentLesson
+    const completionCount = this.lessonStats[currentLesson.filename]
+    const accuracy =
+      this.learningState.totalAttempts > 0
+        ? Math.round((this.learningState.correctAttempts / this.learningState.totalAttempts) * 100)
+        : 0
+
+    document.getElementById("completion-message").textContent = 
+      `Bạn đã hoàn thành bài "${currentLesson.title}"!`
+    document.getElementById("final-total").textContent = this.learningState.totalWords
+    document.getElementById("final-attempts").textContent = this.learningState.totalAttempts
+    document.getElementById("final-accuracy").textContent = `${accuracy}%`
+    document.getElementById("final-completion-count").textContent = completionCount
+
+    modal.style.display = "flex"
+  }
+
+  hideCompletionModal() {
+    document.getElementById("completion-modal").style.display = "none"
+  }
+
+  togglePause() {
+    this.learningState.isPaused = !this.learningState.isPaused
+    const button = document.getElementById("pause-learning")
+
+    if (this.learningState.isPaused) {
+      button.textContent = "▶️ Tiếp tục"
+      this.showFeedback("⏸️ Đã tạm dừng học tập", "info")
+    } else {
+      button.textContent = "⏸️ Tạm dừng"
+      this.showFeedback("▶️ Tiếp tục học tập", "info")
+      setTimeout(() => this.presentNextWord(), 1000)
+    }
+  }
+
+  restartSession() {
+    if (this.learningState.totalWords > 0) {
+      const allWords = [...this.learningState.vocabularyQueue, ...Array.from(this.learningState.completedWords)]
+      this.shuffleArray(allWords)
+
+      this.learningState.vocabularyQueue = allWords
+      this.learningState.completedWords.clear()
+      this.learningState.currentPosition = 0
+      this.learningState.totalAttempts = 0
+      this.learningState.correctAttempts = 0
+      this.learningState.isPaused = false
+
+      document.getElementById("pause-learning").textContent = "⏸️ Tạm dừng"
+
+      this.showFeedback("🔄 Đã bắt đầu lại! Chúc bạn học tốt!", "success")
+      setTimeout(() => this.presentNextWord(), 1000)
+    }
+  }
+
+  // Local Storage Management
+  loadLessonStats() {
+    try {
+      const stats = localStorage.getItem("vocabularyLessonStats")
+      return stats ? JSON.parse(stats) : {}
+    } catch (error) {
+      return {}
+    }
+  }
+
+  saveLessonStats() {
+    try {
+      localStorage.setItem("vocabularyLessonStats", JSON.stringify(this.lessonStats))
+    } catch (error) {
+      console.error("Failed to save lesson stats:", error)
+    }
+  }
+
+  getRandomMessage(type) {
+    const messages = this.feedbackMessages[type]
+    return messages[Math.floor(Math.random() * messages.length)]
+  }
+
+  shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[array[i], array[j]] = [array[j], array[i]]
+    }
+  }
 }
 
-/**
- * Gets a random feedback message from the specified type array.
- * @param {'correct'|'incorrect'} type
- * @returns {string} A random feedback message.
- */
-function getRandomFeedback(type) {
-    const feedbackArray = type === 'correct' ? correctFeedback : incorrectFeedback;
-    return feedbackArray[Math.floor(Math.random() * feedbackArray.length)];
-}
-
-/**
- * Updates the score display.
- */
-function updateScoreDisplay() {
-    scoreDisplayElement.textContent = `Score: ${score} / ${vocabulary.length} (Attempts: ${attempts})`;
-    console.log("updateScoreDisplay: Score updated.");
-}
-
-/**
- * Resets the game state for the current lesson and starts a new round.
- */
-function initializeGame() {
-    console.log("initializeGame: Resetting game state for new round.");
-    score = 0;
-    attempts = 0;
-    matchesFound = 0;
-    selectedEnglishCard = null;
-    selectedVietnameseCard = null;
-    updateFeedback('Match the words!', ''); // Initial neutral feedback
-    updateScoreDisplay();
-    renderCards(); // Re-render cards for a new round
-}
-
-// Event listeners for buttons
-resetButton.addEventListener('click', initializeGame);
-backToLessonsButton.addEventListener('click', () => {
-    console.log("Back to Lessons button clicked.");
-    displayLessonSelection();
-});
-
-// Initial call to initialize Firebase and load lessons when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOMContentLoaded: DOM fully loaded. Initializing Firebase.");
-    initializeFirebase();
-});
+// Initialize app
+document.addEventListener("DOMContentLoaded", () => {
+  new VietnameseVocabularyLearner()
+})

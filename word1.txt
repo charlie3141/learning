@@ -1,0 +1,11 @@
+Lesson 2: Common Objects
+Water - Nước
+Food - Thức ăn
+Book - Sách
+Pen - Bút
+Computer - Máy tính
+House - Nhà
+Car - Xe ô tô
+Tree - Cây
+Flower - Hoa
+Sun - Mặt trời

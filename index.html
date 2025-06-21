@@ -1,134 +1,62 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Học Từ Vựng Thông Minh</title>
+    <title>Dynamic Language Learning</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="mobile-container">
-        <!-- Header -->
-        <header class="mobile-header">
-            <h1 class="app-title">📚 Học Từ Vựng</h1>
-            <div class="header-stats">
-                <span id="word-counter" class="word-counter">0/0</span>
-                <span id="accuracy-display" class="accuracy-display">0%</span>
-            </div>
-        </header>
+    <div class="container">
+        <h1 id="main-title">Vocabulary Matcher</h1>
+        <p class="user-id-display">Your User ID: <span id="user-id-span">Loading...</span></p>
 
-        <!-- File Upload Section -->
-        <div class="file-upload-section" id="file-upload-section">
-            <div class="upload-card">
-                <div class="upload-icon">📁</div>
-                <h2>Tải từ vựng của bạn</h2>
-                <p>Chọn file word.txt để bắt đầu học</p>
-                
-                <label for="file-input" class="upload-btn">
-                    Chọn file từ vựng
-                </label>
-                <input type="file" id="file-input" accept=".txt" class="file-input">
-                
-                <div class="divider">
-                    <span>hoặc</span>
-                </div>
-                
-                <button id="load-demo" class="demo-btn">
-                    🎮 Dùng từ vựng mẫu
-                </button>
+        <!-- Lesson Selection Area -->
+        <div id="lesson-selection-area" class="section">
+            <h2>Choose a Lesson</h2>
+            <div id="lessons-list">
+                <!-- Lesson buttons will be loaded here by JavaScript -->
+                <p id="loading-lessons-message">Loading lessons...</p>
             </div>
         </div>
 
-        <!-- Progress Bar -->
-        <div class="progress-container" id="progress-container" style="display: none;">
-            <div class="progress-bar">
-                <div id="progress-fill" class="progress-fill"></div>
-            </div>
-            <div class="progress-stats">
-                <span id="progress-text">Đang tải...</span>
-                <span id="remaining-count" class="remaining-count">0 còn lại</span>
-            </div>
-        </div>
-
-        <!-- Learning Interface -->
-        <div class="learning-interface" id="learning-interface" style="display: none;">
-            <!-- Word Display -->
-            <div class="word-card">
-                <div class="word-status">
-                    <span id="word-type" class="word-type">Từ mới</span>
+        <!-- Game Area -->
+        <div id="game-container" class="section hidden">
+            <div class="game-area">
+                <div class="card-column" id="english-words">
+                    <h2>English Words</h2>
+                    <!-- English word cards will be loaded here by JavaScript -->
                 </div>
-                <div class="english-word">
-                    <h2 id="target-word">LOADING</h2>
-                </div>
-                <p class="instruction">Chọn nghĩa tiếng Việt đúng</p>
-            </div>
-
-            <!-- Options Grid -->
-            <div class="options-container">
-                <div id="options-grid" class="options-grid">
-                    <!-- 6 options will be generated here -->
+                <div class="card-column" id="vietnamese-meanings">
+                    <h2>Vietnamese Meanings</h2>
+                    <!-- Vietnamese meaning cards will be loaded here by JavaScript -->
                 </div>
             </div>
-
-            <!-- Feedback Area -->
-            <div class="feedback-container" id="feedback-container">
-                <div id="feedback-message" class="feedback-message"></div>
-                <div id="correct-answer" class="correct-answer"></div>
+            <div class="feedback-area">
+                <p id="feedback-message" class="feedback"></p>
+                <p id="score-display" class="score">Score: 0 / 0</p>
             </div>
-        </div>
-
-        <!-- Completion Modal -->
-        <div class="completion-overlay" id="completion-modal" style="display: none;">
-            <div class="completion-card">
-                <div class="completion-icon">🎉</div>
-                <h2>Xuất sắc!</h2>
-                <p>Bạn đã hoàn thành tất cả từ vựng!</p>
-                
-                <div class="final-stats">
-                    <div class="stat-row">
-                        <span class="stat-label">Tổng từ vựng:</span>
-                        <span id="final-total" class="stat-value">0</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">Tổng lần thử:</span>
-                        <span id="final-attempts" class="stat-value">0</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">Độ chính xác:</span>
-                        <span id="final-accuracy" class="stat-value">0%</span>
-                    </div>
-                </div>
-                
-                <button id="restart-learning" class="restart-btn">
-                    🔄 Học lại từ đầu
-                </button>
-            </div>
-        </div>
-
-        <!-- Control Buttons -->
-        <div class="control-panel" id="control-panel" style="display: none;">
-            <button id="pause-learning" class="control-btn pause-btn">
-                ⏸️ Tạm dừng
-            </button>
-            <button id="restart-session" class="control-btn restart-btn">
-                🔄 Bắt đầu lại
-            </button>
-        </div>
-
-        <!-- Bottom Info -->
-        <div class="bottom-info">
-            <div class="info-card">
-                <h3>💡 Cách học hiệu quả</h3>
-                <ul>
-                    <li>Từ trả lời đúng sẽ không xuất hiện lại</li>
-                    <li>Từ trả lời sai sẽ được lặp lại sau</li>
-                    <li>Hệ thống tự động chuyển sang từ tiếp theo</li>
-                    <li>Tập trung học những từ chưa biết</li>
-                </ul>
+            <div class="controls">
+                <button id="reset-button">Restart Lesson</button>
+                <button id="back-to-lessons-button">Back to Lessons</button>
             </div>
         </div>
     </div>
 
+    <!-- Firebase SDK Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Expose Firebase modules to the global scope for script.js
+        window.firebase = {
+            initializeApp,
+            getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged,
+            getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, getDocs
+        };
+    </script>
     <script src="script.js"></script>
 </body>
 </html>

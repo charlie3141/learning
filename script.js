@@ -50,13 +50,34 @@ const incorrectFeedback = [
  */
 async function initializeFirebase() {
     console.log("initializeFirebase: Starting Firebase initialization...");
-    // These global variables are provided by the Canvas environment.
+    let firebaseConfig = {};
+
+    // Get __app_id and __firebase_config from the Canvas environment
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+    console.log("initializeFirebase: __app_id is:", appId);
+
+    try {
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+            firebaseConfig = JSON.parse(__firebase_config);
+            console.log("initializeFirebase: __firebase_config parsed successfully.");
+            // console.log("initializeFirebase: Firebase Config:", firebaseConfig); // Log for debugging, but be cautious with sensitive info
+        } else {
+            console.warn("initializeFirebase: __firebase_config is undefined or empty. Using empty config.");
+        }
+    } catch (e) {
+        console.error("initializeFirebase: Error parsing __firebase_config:", e);
+        feedbackMessageElement.textContent = 'Configuration error: Could not parse Firebase settings.';
+        loadingLessonsMessage.textContent = 'Configuration error: Could not parse Firebase settings.';
+        feedbackMessageElement.classList.add('incorrect');
+        return; // Stop initialization if config is bad
+    }
+
 
     if (!window.firebase) {
         console.error("initializeFirebase: Firebase SDK not loaded. Check script type='module' in index.html.");
         feedbackMessageElement.textContent = 'Firebase SDK failed to load.';
+        loadingLessonsMessage.textContent = 'Firebase SDK failed to load.';
+        feedbackMessageElement.classList.add('incorrect');
         return;
     }
 
@@ -73,7 +94,7 @@ async function initializeFirebase() {
                 // User is signed in
                 userId = user.uid;
                 userIdSpan.textContent = userId;
-                console.log("Firebase Auth Ready. User ID:", userId);
+                console.log("onAuthStateChanged: Firebase Auth Ready. User ID:", userId);
             } else {
                 // User is signed out or not authenticated. Sign in anonymously.
                 try {
@@ -87,10 +108,13 @@ async function initializeFirebase() {
                     }
                     userId = auth.currentUser?.uid || crypto.randomUUID(); // Fallback for anonymous
                     userIdSpan.textContent = userId;
-                    console.log("Firebase Auth Ready. Anonymous User ID:", userId);
+                    console.log("onAuthStateChanged: Firebase Auth Ready. User ID (after anonymous/custom sign-in):", userId);
                 } catch (anonError) {
-                    console.error("onAuthStateChanged: Error signing in anonymously:", anonError);
+                    console.error("onAuthStateChanged: Error signing in anonymously/custom token:", anonError);
                     userIdSpan.textContent = "Error";
+                    feedbackMessageElement.textContent = `Authentication error: ${anonError.message}`;
+                    loadingLessonsMessage.textContent = `Authentication error: ${anonError.message}`;
+                    feedbackMessageElement.classList.add('incorrect');
                 }
             }
             isAuthReady = true;
@@ -99,10 +123,10 @@ async function initializeFirebase() {
             await loadAllLessons();
         });
     } catch (error) {
-        console.error("initializeFirebase: Error initializing Firebase:", error);
+        console.error("initializeFirebase: Error initializing Firebase app or services:", error);
         feedbackMessageElement.textContent = 'Failed to initialize application services.';
+        loadingLessonsMessage.textContent = 'Failed to initialize application services.';
         feedbackMessageElement.classList.add('incorrect');
-        loadingLessonsMessage.textContent = 'Failed to load lessons due to an application error.';
     }
 }
 
@@ -178,7 +202,9 @@ async function loadAllLessons() {
         } catch (error) {
             console.error(`loadAllLessons: Error fetching lesson ${filename}:`, error);
             // Stop if there's a serious network error or other issue
-            break;
+            lessonsListContainer.textContent = `Error loading lessons: ${error.message}`;
+            loadingLessonsMessage.style.display = 'none'; // Hide loading message
+            break; // Stop trying to fetch more files on error
         }
     }
 
@@ -190,7 +216,7 @@ async function loadAllLessons() {
         await getLessonPlayCounts(); // Fetch play counts from Firestore after loading all lessons
         // displayLessonSelection() is called inside getLessonPlayCounts now
     } else {
-        lessonsListContainer.textContent = 'No lessons found. Please ensure wordN.txt files exist.';
+        lessonsListContainer.textContent = 'No lessons found. Please ensure wordN.txt files exist and are correctly formatted.';
         console.log("loadAllLessons: No lessons found. Displaying message.");
     }
 }
@@ -207,7 +233,8 @@ async function getLessonPlayCounts() {
         return;
     }
     // Define the path to the user's private lesson progress collection
-    const lessonProgressRef = window.firebase.collection(db, `artifacts/${__app_id}/users/${userId}/lesson_progress`);
+    // Ensure __app_id is correctly defined for the Firestore path
+    const lessonProgressRef = window.firebase.collection(db, `artifacts/${appId}/users/${userId}/lesson_progress`);
     try {
         const querySnapshot = await window.firebase.getDocs(lessonProgressRef);
         const playCountsMap = new Map();
@@ -239,8 +266,8 @@ async function updateLessonPlayCount(filename) {
         console.warn("updateLessonPlayCount: Firebase not ready or user ID not available to update play count.");
         return;
     }
-    // Define the document reference for this specific lesson's progress
-    const lessonDocRef = window.firebase.doc(db, `artifacts/${__app_id}/users/${userId}/lesson_progress`, filename);
+    // Ensure __app_id is correctly defined for the Firestore path
+    const lessonDocRef = window.firebase.doc(db, `artifacts/${appId}/users/${userId}/lesson_progress`, filename);
     try {
         const docSnap = await window.firebase.getDoc(lessonDocRef);
         if (docSnap.exists()) {

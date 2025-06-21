@@ -1,11 +1,12 @@
-Lesson 2: Common Objects
-Water - Nước
-Food - Thức ăn
-Book - Sách
-Pen - Bút
-Computer - Máy tính
-House - Nhà
-Car - Xe ô tô
-Tree - Cây
-Flower - Hoa
-Sun - Mặt trời
+Bài 1
+Cook – nấu ăn
+Do homework – làm bài tập
+Finish – hoàn thành
+Have breakfast – ăn sáng
+Go to work – đi làm
+Relax – thư giãn
+Tidy my room – dọn phòng
+Wake up – thức dậy
+Weekdays – ngày trong tuần
+Weekends – ngày cuối tuần
+Meal – bữa ăn

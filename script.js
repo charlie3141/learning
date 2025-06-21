@@ -49,12 +49,13 @@ const incorrectFeedback = [
  * Sets up an auth state listener to get the user ID.
  */
 async function initializeFirebase() {
+    console.log("initializeFirebase: Starting Firebase initialization...");
     // These global variables are provided by the Canvas environment.
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
     const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 
     if (!window.firebase) {
-        console.error("Firebase SDK not loaded. Check script type='module' in index.html.");
+        console.error("initializeFirebase: Firebase SDK not loaded. Check script type='module' in index.html.");
         feedbackMessageElement.textContent = 'Firebase SDK failed to load.';
         return;
     }
@@ -63,9 +64,11 @@ async function initializeFirebase() {
         const app = window.firebase.initializeApp(firebaseConfig);
         db = window.firebase.getFirestore(app);
         auth = window.firebase.getAuth(app);
+        console.log("initializeFirebase: Firebase app, db, auth initialized.");
 
         // Listen for authentication state changes
         window.firebase.onAuthStateChanged(auth, async (user) => {
+            console.log("onAuthStateChanged: Auth state changed. User:", user ? user.uid : "null (anonymous sign-in attempt)");
             if (user) {
                 // User is signed in
                 userId = user.uid;
@@ -77,23 +80,26 @@ async function initializeFirebase() {
                     // Use __initial_auth_token if provided, otherwise sign in anonymously
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         await window.firebase.signInWithCustomToken(auth, __initial_auth_token);
+                        console.log("onAuthStateChanged: Signed in with custom token.");
                     } else {
                         await window.firebase.signInAnonymously(auth);
+                        console.log("onAuthStateChanged: Signed in anonymously.");
                     }
                     userId = auth.currentUser?.uid || crypto.randomUUID(); // Fallback for anonymous
                     userIdSpan.textContent = userId;
                     console.log("Firebase Auth Ready. Anonymous User ID:", userId);
                 } catch (anonError) {
-                    console.error("Error signing in anonymously:", anonError);
+                    console.error("onAuthStateChanged: Error signing in anonymously:", anonError);
                     userIdSpan.textContent = "Error";
                 }
             }
             isAuthReady = true;
+            console.log("onAuthStateChanged: isAuthReady set to true. Calling loadAllLessons.");
             // Once auth is ready, load all lessons and their play counts
             await loadAllLessons();
         });
     } catch (error) {
-        console.error("Error initializing Firebase:", error);
+        console.error("initializeFirebase: Error initializing Firebase:", error);
         feedbackMessageElement.textContent = 'Failed to initialize application services.';
         feedbackMessageElement.classList.add('incorrect');
         loadingLessonsMessage.textContent = 'Failed to load lessons due to an application error.';
@@ -105,6 +111,7 @@ async function initializeFirebase() {
  * Parses each file, extracts the title (first line), and vocabulary.
  */
 async function loadAllLessons() {
+    console.log("loadAllLessons: Starting lesson loading process.");
     lessonsListContainer.innerHTML = ''; // Clear previous lesson list
     loadingLessonsMessage.textContent = 'Loading lessons...';
     loadingLessonsMessage.style.display = 'block'; // Show loading message
@@ -115,13 +122,14 @@ async function loadAllLessons() {
 
     while (true) {
         const filename = `word${lessonIndex}.txt`;
+        console.log(`loadAllLessons: Attempting to fetch ${filename}`);
         try {
             const response = await fetch(filename);
 
             if (!response.ok) {
                 // If 404 Not Found, assume no more lesson files
                 if (response.status === 404) {
-                    console.log(`No more lesson files found after ${filename}`);
+                    console.log(`loadAllLessons: No more lesson files found after ${filename} (404). Breaking loop.`);
                     break;
                 } else {
                     throw new Error(`HTTP error! Status: ${response.status} for ${filename}`);
@@ -130,9 +138,11 @@ async function loadAllLessons() {
 
             const text = await response.text();
             const lines = text.split('\n').filter(line => line.trim() !== '');
+            console.log(`loadAllLessons: Successfully fetched ${filename}. Lines count: ${lines.length}`);
+
 
             if (lines.length === 0) {
-                console.warn(`Skipping empty lesson file: ${filename}`);
+                console.warn(`loadAllLessons: Skipping empty lesson file: ${filename}`);
                 lessonIndex++;
                 continue;
             }
@@ -147,7 +157,7 @@ async function loadAllLessons() {
                         id: `${filename}-word-${index}` // Unique ID for matching
                     };
                 }
-                console.warn(`Skipping malformed vocabulary line in ${filename}: ${line}`);
+                console.warn(`loadAllLessons: Skipping malformed vocabulary line in ${filename}: ${line}`);
                 return null;
             }).filter(item => item !== null); // Filter out malformed vocabulary entries
 
@@ -159,25 +169,29 @@ async function loadAllLessons() {
                     playCount: 0 // Will be updated from Firestore
                 });
                 foundLessons = true;
+                console.log(`loadAllLessons: Added lesson "${title}" from ${filename} with ${vocab.length} words.`);
             } else {
-                console.warn(`Lesson file ${filename} contains only a title or no valid vocabulary.`);
+                console.warn(`loadAllLessons: Lesson file ${filename} contains only a title or no valid vocabulary.`);
             }
 
             lessonIndex++;
         } catch (error) {
-            console.error(`Error fetching lesson ${filename}:`, error);
+            console.error(`loadAllLessons: Error fetching lesson ${filename}:`, error);
             // Stop if there's a serious network error or other issue
             break;
         }
     }
 
     loadingLessonsMessage.style.display = 'none'; // Hide loading message
+    console.log(`loadAllLessons: Finished fetching lessons. Found ${allLessons.length} lessons. `);
 
     if (foundLessons) {
+        console.log("loadAllLessons: Found lessons. Calling getLessonPlayCounts.");
         await getLessonPlayCounts(); // Fetch play counts from Firestore after loading all lessons
-        displayLessonSelection(); // Show the lesson selection UI
+        // displayLessonSelection() is called inside getLessonPlayCounts now
     } else {
         lessonsListContainer.textContent = 'No lessons found. Please ensure wordN.txt files exist.';
+        console.log("loadAllLessons: No lessons found. Displaying message.");
     }
 }
 
@@ -186,8 +200,10 @@ async function loadAllLessons() {
  * Merges these counts into the `allLessons` array.
  */
 async function getLessonPlayCounts() {
+    console.log("getLessonPlayCounts: Attempting to fetch play counts.");
     if (!isAuthReady || !userId || !db) {
-        console.warn("Firebase not ready or user ID not available to fetch play counts.");
+        console.warn("getLessonPlayCounts: Firebase not ready or user ID not available to fetch play counts. isAuthReady:", isAuthReady, "userId:", userId, "db:", db);
+        displayLessonSelection(); // Still try to display lessons even if counts can't be fetched
         return;
     }
     // Define the path to the user's private lesson progress collection
@@ -198,16 +214,18 @@ async function getLessonPlayCounts() {
         querySnapshot.forEach(doc => {
             playCountsMap.set(doc.id, doc.data().playCount || 0); // doc.id is the filename
         });
+        console.log("getLessonPlayCounts: Fetched play counts:", playCountsMap);
 
         // Update allLessons with fetched play counts
         allLessons.forEach(lesson => {
             lesson.playCount = playCountsMap.has(lesson.filename) ? playCountsMap.get(lesson.filename) : 0;
         });
-        // Re-display lesson selection to show updated counts
-        displayLessonSelection();
+        console.log("getLessonPlayCounts: Updated allLessons with play counts.");
+        displayLessonSelection(); // Re-display lesson selection to show updated counts
     } catch (error) {
-        console.error("Error fetching lesson play counts:", error);
+        console.error("getLessonPlayCounts: Error fetching lesson play counts:", error);
         feedbackMessageElement.textContent = 'Could not load your lesson progress.';
+        displayLessonSelection(); // Display lessons even if counts failed to load
     }
 }
 
@@ -216,8 +234,9 @@ async function getLessonPlayCounts() {
  * @param {string} filename The filename of the lesson (used as document ID).
  */
 async function updateLessonPlayCount(filename) {
+    console.log("updateLessonPlayCount: Attempting to update play count for:", filename);
     if (!isAuthReady || !userId || !db) {
-        console.warn("Firebase not ready or user ID not available to update play count.");
+        console.warn("updateLessonPlayCount: Firebase not ready or user ID not available to update play count.");
         return;
     }
     // Define the document reference for this specific lesson's progress
@@ -227,18 +246,20 @@ async function updateLessonPlayCount(filename) {
         if (docSnap.exists()) {
             const currentCount = docSnap.data().playCount || 0;
             await window.firebase.updateDoc(lessonDocRef, { playCount: currentCount + 1 });
-            console.log(`Updated play count for ${filename} to ${currentCount + 1}`);
+            console.log(`updateLessonPlayCount: Updated play count for ${filename} to ${currentCount + 1}`);
         } else {
             await window.firebase.setDoc(lessonDocRef, { playCount: 1 });
-            console.log(`Initialized play count for ${filename} to 1`);
+            console.log(`updateLessonPlayCount: Initialized play count for ${filename} to 1`);
         }
         // Update local lesson data immediately
         const lessonToUpdate = allLessons.find(lesson => lesson.filename === filename);
         if (lessonToUpdate) {
             lessonToUpdate.playCount = (lessonToUpdate.playCount || 0) + 1;
+            // No need to call displayLessonSelection here if the user is still in game
+            // The counts will be reloaded and displayed when they go back to the lesson list.
         }
     } catch (error) {
-        console.error("Error updating lesson play count:", error);
+        console.error("updateLessonPlayCount: Error updating lesson play count:", error);
         feedbackMessageElement.textContent = 'Could not save lesson progress.';
     }
 }
@@ -247,13 +268,15 @@ async function updateLessonPlayCount(filename) {
  * Displays the lesson selection screen and populates it with available lessons.
  */
 function displayLessonSelection() {
+    console.log("displayLessonSelection: Showing lesson selection UI.");
     mainTitleElement.textContent = 'Vocabulary Matcher'; // Reset main title
     lessonSelectionArea.classList.remove('hidden');
-    gameContainer.classList.add('hidden');
+    gameContainer.classList.add('hidden'); // Ensure game container is hidden
     lessonsListContainer.innerHTML = ''; // Clear existing lesson cards
 
     if (allLessons.length === 0) {
         lessonsListContainer.textContent = 'No lessons available.';
+        console.log("displayLessonSelection: No lessons in allLessons array.");
         return;
     }
 
@@ -267,6 +290,7 @@ function displayLessonSelection() {
         lessonCard.addEventListener('click', () => startLesson(lesson));
         lessonsListContainer.appendChild(lessonCard);
     });
+    console.log(`displayLessonSelection: Rendered ${allLessons.length} lesson cards.`);
 }
 
 /**
@@ -274,6 +298,7 @@ function displayLessonSelection() {
  * @param {Object} lesson The lesson object to start.
  */
 function startLesson(lesson) {
+    console.log("startLesson: Starting lesson:", lesson.title);
     currentLesson = lesson;
     vocabulary = lesson.vocab; // Set global vocabulary to the selected lesson's vocab
 
@@ -318,6 +343,7 @@ function createCard(text, type, dataId) {
  * Renders the shuffled English words and Vietnamese meanings to the DOM.
  */
 function renderCards() {
+    console.log("renderCards: Rendering new set of cards.");
     // Clear previous cards
     englishWordsContainer.innerHTML = '<h2>English Words</h2>';
     vietnameseMeaningsContainer.innerHTML = '<h2>Vietnamese Meanings</h2>';
@@ -336,6 +362,7 @@ function renderCards() {
     vietnameseMeaningCards.forEach(meaning => {
         vietnameseMeaningsContainer.appendChild(createCard(meaning.text, 'vietnamese', meaning.id));
     });
+    console.log(`renderCards: Rendered ${vocabulary.length} English and ${vocabulary.length} Vietnamese cards.`);
 }
 
 /**
@@ -345,9 +372,11 @@ function renderCards() {
  */
 function handleCardClick(event) {
     const clickedCard = event.target;
+    console.log("handleCardClick: Card clicked:", clickedCard.textContent, clickedCard.dataset.id);
 
     // Do nothing if the card is already matched or is not a card element
     if (clickedCard.classList.contains('matched') || !clickedCard.classList.contains('card')) {
+        console.log("handleCardClick: Card already matched or not a valid card. Ignoring click.");
         return;
     }
 
@@ -358,18 +387,21 @@ function handleCardClick(event) {
             selectedEnglishCard.classList.remove('selected');
         }
         selectedEnglishCard = clickedCard;
+        console.log("handleCardClick: English card selected:", selectedEnglishCard.textContent);
     } else if (clickedCard.classList.contains('vietnamese')) {
         // Deselect previously selected Vietnamese card if any
         if (selectedVietnameseCard) {
             selectedVietnameseCard.classList.remove('selected');
         }
         selectedVietnameseCard = clickedCard;
+        console.log("handleCardClick: Vietnamese card selected:", selectedVietnameseCard.textContent);
     }
 
     clickedCard.classList.add('selected'); // Mark the clicked card as selected
 
     // If both an English and a Vietnamese card are selected, check for a match
     if (selectedEnglishCard && selectedVietnameseCard) {
+        console.log("handleCardClick: Both cards selected. Checking match in 500ms.");
         // Delay checking to allow visual "selected" state to register
         setTimeout(checkMatch, 500);
     }
@@ -381,6 +413,7 @@ function handleCardClick(event) {
  */
 function checkMatch() {
     attempts++; // Increment total attempts
+    console.log("checkMatch: Checking match. Attempt:", attempts);
 
     const englishId = selectedEnglishCard.dataset.id;
     const vietnameseId = selectedVietnameseCard.dataset.id;
@@ -390,6 +423,8 @@ function checkMatch() {
         score++;
         matchesFound++;
         updateFeedback(getRandomFeedback('correct'), 'correct');
+        console.log(`checkMatch: Correct match! ${selectedEnglishCard.textContent} - ${selectedVietnameseCard.textContent}. Matches found: ${matchesFound}/${vocabulary.length}`);
+
 
         // Mark cards as matched and disable them
         selectedEnglishCard.classList.remove('selected');
@@ -405,6 +440,7 @@ function checkMatch() {
 
         // Check if all words have been matched
         if (matchesFound === vocabulary.length) {
+            console.log("checkMatch: All words matched! Game completed.");
             setTimeout(() => {
                 feedbackMessageElement.textContent = `🎉 Congratulations! You matched all ${vocabulary.length} words in ${attempts} attempts!`;
                 feedbackMessageElement.classList.remove('correct', 'incorrect');
@@ -420,6 +456,7 @@ function checkMatch() {
     } else {
         // Incorrect match
         updateFeedback(getRandomFeedback('incorrect'), 'incorrect');
+        console.log(`checkMatch: Incorrect match. ${selectedEnglishCard.textContent} - ${selectedVietnameseCard.textContent}`);
 
         // Briefly show the incorrect selection, then deselect
         setTimeout(() => {
@@ -427,6 +464,7 @@ function checkMatch() {
             if (selectedVietnameseCard) selectedVietnameseCard.classList.remove('selected');
             selectedEnglishCard = null;
             selectedVietnameseCard = null;
+            console.log("checkMatch: Incorrect cards deselected.");
         }, 800); // Keep selected state for a moment before resetting
     }
 }
@@ -460,12 +498,14 @@ function getRandomFeedback(type) {
  */
 function updateScoreDisplay() {
     scoreDisplayElement.textContent = `Score: ${score} / ${vocabulary.length} (Attempts: ${attempts})`;
+    console.log("updateScoreDisplay: Score updated.");
 }
 
 /**
  * Resets the game state for the current lesson and starts a new round.
  */
 function initializeGame() {
+    console.log("initializeGame: Resetting game state for new round.");
     score = 0;
     attempts = 0;
     matchesFound = 0;
@@ -478,7 +518,13 @@ function initializeGame() {
 
 // Event listeners for buttons
 resetButton.addEventListener('click', initializeGame);
-backToLessonsButton.addEventListener('click', displayLessonSelection);
+backToLessonsButton.addEventListener('click', () => {
+    console.log("Back to Lessons button clicked.");
+    displayLessonSelection();
+});
 
 // Initial call to initialize Firebase and load lessons when the page loads
-document.addEventListener('DOMContentLoaded', initializeFirebase);
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOMContentLoaded: DOM fully loaded. Initializing Firebase.");
+    initializeFirebase();
+});

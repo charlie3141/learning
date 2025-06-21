@@ -1,12 +1,12 @@
 Bài 1
-Cook – nấu ăn
-Do homework – làm bài tập
-Finish – hoàn thành
-Have breakfast – ăn sáng
-Go to work – đi làm
-Relax – thư giãn
-Tidy my room – dọn phòng
-Wake up – thức dậy
-Weekdays – ngày trong tuần
-Weekends – ngày cuối tuần
-Meal – bữa ăn
+Cook - nấu ăn
+Do homework - làm bài tập
+Finish - hoàn thành
+Have breakfast - ăn sáng
+Go to work - đi làm
+Relax - thư giãn
+Tidy my room - dọn phòng
+Wake up - thức dậy
+Weekdays - ngày trong tuần
+Weekends - ngày cuối tuần
+Meal - bữa ăn

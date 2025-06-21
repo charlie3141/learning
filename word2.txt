@@ -1,13 +1,32 @@
-Bài 1
-Cook – nấu ăn
-Do homework – làm bài tập
-Finish – hoàn thành
-Have breakfast – ăn sáng
-Go to work – đi làm
-Relax – thư giãn
-Tidy my room – dọn phòng
-Wake up – thức dậy
-Weekdays – ngày trong tuần
-Weekends – ngày cuối tuần
-Meal – bữa ăn
-
+Trạng Từ Chỉ Tần Suất - Adverbs of Frequency
+always - luôn luôn
+never - không bao giờ
+usually - thường xuyên
+sometimes - thỉnh thoảng
+often - thường
+rarely - hiếm khi
+frequently - thường xuyên
+occasionally - thỉnh thoảng
+seldom - ít khi
+constantly - liên tục
+regularly - đều đặn
+hardly ever - hầu như không bao giờ
+almost always - hầu như luôn luôn
+almost never - hầu như không bao giờ
+every day - mỗi ngày
+every week - mỗi tuần
+every month - mỗi tháng
+every year - mỗi năm
+once - một lần
+twice - hai lần
+three times - ba lần
+daily - hàng ngày
+weekly - hàng tuần
+monthly - hàng tháng
+yearly - hàng năm
+hourly - mỗi giờ
+repeatedly - lặp đi lặp lại
+continuously - liên tục
+periodically - định kỳ
+sporadically - thất thường
+intermittently - ngắt quãng

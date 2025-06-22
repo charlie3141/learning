@@ -3,7 +3,7 @@ always - luôn luôn
 never - không bao giờ
 usually - thường xuyên
 sometimes - thỉnh thoảng
-often - thường
+often - thường xuyên
 rarely - hiếm khi
 frequently - thường xuyên
 occasionally - thỉnh thoảng

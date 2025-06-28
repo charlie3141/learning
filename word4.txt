@@ -49,3 +49,14 @@ best - nhất
 compete - thi đấu
 for - cho
 prize - giải thưởng
+competition - cuộc thi
+last - cuối
+last for - diễn ra trong ...
+perfect - hoàn hảo
+move - di chuyển
+feet(số nhiều),foot(số ít) - chân
+rest - nghỉ ngơi
+competitor - thí sinh
+times - số lần
+energy - năng lượng
+minute - phút

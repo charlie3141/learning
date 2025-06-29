@@ -24,3 +24,12 @@ skirt - váy
 scarf - khăn choàng
 trousers - quần tây
 shorts - quần ngắn
+carry - cầm
+shop - mua hàng
+steal -cướp
+purse - ví của phụ nữ
+notice - chú ý
+shine - tỏa sáng
+yesterday -hôm qua
+sun - mặt trời
+wait - chờ

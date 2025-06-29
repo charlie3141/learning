@@ -25,7 +25,7 @@ scarf - khăn choàng
 trousers - quần tây
 shorts - quần ngắn
 carry - cầm
-shop - mua hàng
+shop (v) - mua hàng
 steal -cướp
 purse - ví của phụ nữ
 notice - chú ý
@@ -33,3 +33,13 @@ shine - tỏa sáng
 yesterday -hôm qua
 sun - mặt trời
 wait - chờ
+rule - luật lệ
+action - hành động
+simultaneous - liên tục
+continuous - liên tiếp
+interrupt - cắt ngang
+outside - bên ngoài
+accident - tai nạn
+cycle - đạp xe đạp
+phone (v) - gọi
+celebrate - ăn mừng

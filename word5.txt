@@ -1,0 +1,26 @@
+29/06/2025
+office - văn phòng
+fashion - thời trang
+identify - nhận diện
+someone - ai đó
+personality - tính cách
+interests - sở thích
+wear - mặc
+spring - xuân
+summer - hạ
+fall - thu
+autumn - thu
+winter - đông
+believe - tin
+contact - liên lạc
+baggy - rộng thùng thình 
+blouse - áo khoác ngoài
+indigo - màu chàm
+pattern - họa tiết
+trainers - giày thể thao
+shirt - áo thun
+knee_length - dài đến đầu gối
+skirt - váy
+scarf - khăn choàng
+trousers - quần tây
+shorts - quần ngắn

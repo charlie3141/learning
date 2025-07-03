@@ -1,0 +1,68 @@
+03/07/2025
+waiter - người phục vụ
+bring - mang đến
+most - nhiều nhất
+usual - bình thường
+unusual - bất thường
+dish - món ăn
+arrive - đến
+thing - đồ vật
+prefer - thích hơn
+sight - khung cảnh
+beautiful - đẹp
+sunset - mặt trời lặn
+warm - ấm
+hold - cầm
+cover - bìa
+recipe = công thức nấu ăn
+almost - gần như
+condition - điều kiện
+tone - âm điệu
+deaf - điếc
+instrument - nhạc cụ
+well - tốt
+anything - một thứ
+lose - mất
+toe - ngón chân
+finger - ngón tay
+activity - hoạt động
+shower - tắm vòi hoa sen
+bath - tắm bồn
+stand - đứng
+can't stand - không chịu được
+remind - gợi nhắc về
+least - ít nhất
+typical - bình thường
+experience - kinh nghiệm
+last - cuối
+memorable - đáng nhớ
+feelings - cảm xúc
+questionnaire - bộ câu hỏi
+delicious - ngon
+disgusting - gớm ghiếc
+wonderful - tuyệt vời
+place - nơi ở
+remember - ghi nhớ
+totally - hoàn toàn
+touch - chạm
+weird - kỳ lạ
+fascinating - tuyệt vời
+terrifying - đáng sợ
+ride - chuyến đi
+theme park - công viên
+tasty - ngon miệng
+horrible - tồi tệ
+decide - quyết định
+type - kiểu loại
+age - tuổi
+noun - danh từ
+distance - khoảng cách
+reason - lý do
+adjective - tính từ
+ride_rode_ridden - lái
+alpaca - lạc đà không bướu
+probably - có lẽ
+far_farther/further_farthest/furthest - xa nhất
+durian - sầu riêng
+bus - xe buýt
+partner - bạn đồng hành

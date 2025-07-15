@@ -31,3 +31,12 @@ ocean - biển
 competitor - người tham gia thi đấu
 through - băng qua
 dune - cồn cát
+desert - sa mạc
+race - cuộc đua
+part - một phần
+challenge - thử thách
+include - bao gồm
+dream - mơ
+national - quốc gia
+volcano - núi lửa
+prefer - thích hơn

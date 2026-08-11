@@ -1,60 +1,171 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f7f8ff">
-  <title>Đang sửa code — Vietnamese vocabulary</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Học Từ Vựng Thông Minh</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="shell">
-    <header class="topbar">
-      <div class="brand"><span class="brand-mark">v.</span><span>viet.words</span></div>
-      <div class="streak" aria-label="Daily practice streak"><span>✦</span> <b id="streak">0</b> day streak</div>
-    </header>
+    <div class="mobile-container">
+        <!-- Header -->
+        <header class="mobile-header">
+            <div class="header-left">
+                <button id="back-to-lessons" class="back-btn" style="display: none;">
+                    ← Bài học
+                </button>
+                <h1 class="app-title">📚 Học Từ Vựng</h1>
+            </div>
+            <div class="header-stats">
+                <span id="word-counter" class="word-counter" style="display: none;">0/0</span>
+                <span id="accuracy-display" class="accuracy-display" style="display: none;">0%</span>
+            </div>
+        </header>
 
-    <section id="library" class="view active" aria-labelledby="library-title">
-      <div class="hero">
-        <p class="eyebrow">VIETNAMESE VOCABULARY</p>
-        <h1 id="library-title">Learn a little.<br><em>Remember a lot.</em></h1>
-        <p class="hero-copy">Pick a quiz or make your own. Four friendly answers, one step at a time.</p>
-      </div>
+        <!-- Lesson Selection Screen -->
+        <div class="lesson-selection" id="lesson-selection">
+            <div class="welcome-section">
+                <div class="welcome-icon">🎓</div>
+                <h2>Chọn Bài Học</h2>
+                <p>Chọn bài học bạn muốn luyện tập</p>
+            </div>
 
-      <section class="creator" aria-labelledby="creator-title">
-        <div class="section-heading"><div><p class="eyebrow">MAKE YOUR OWN</p><h2 id="creator-title">Create a quiz</h2></div><span class="spark">✦</span></div>
-        <form id="creator-form">
-          <label for="quiz-name">Quiz name</label>
-          <input id="quiz-name" required maxlength="48" placeholder="e.g. Café conversations">
-          <label for="quiz-data">Your words <span>one pair per line</span></label>
-          <textarea id="quiz-data" required rows="5" placeholder="coffee - cà phê&#10;water - nước&#10;delicious - ngon"></textarea>
-          <p class="format-note">Use the format <strong>English - Vietnamese</strong></p>
-          <p id="creator-error" class="error" role="alert"></p>
-          <button class="primary full" type="submit">Save quiz <span>→</span></button>
-        </form>
-      </section>
+            <div class="lessons-container">
+                <div class="lessons-grid" id="lessons-grid">
+                    <!-- Lessons will be loaded here -->
+                </div>
+                
+                <div class="loading-lessons" id="loading-lessons">
+                    <div class="loading-spinner"></div>
+                    <p>Đang tải danh sách bài học...</p>
+                </div>
 
-      <section class="lesson-section" aria-labelledby="your-title" id="custom-section" hidden>
-        <div class="section-heading"><div><p class="eyebrow">YOUR LIBRARY</p><h2 id="your-title">Your quizzes</h2></div><span class="count" id="custom-count">0</span></div>
-        <div id="custom-lessons" class="lesson-grid"></div>
-      </section>
+                <div class="no-lessons" id="no-lessons" style="display: none;">
+                    <div class="empty-icon">📝</div>
+                    <h3>Không tìm thấy bài học</h3>
+                    <p>Vui lòng tải file từ vựng của bạn</p>
+                </div>
+            </div>
 
-      <section class="lesson-section" aria-labelledby="public-title">
-        <div class="section-heading"><div><p class="eyebrow">START HERE</p><h2 id="public-title">Public quizzes</h2></div><span class="count">3</span></div>
-        <div id="public-lessons" class="lesson-grid"></div>
-      </section>
-    </section>
+            <div class="upload-section">
+                <div class="divider">
+                    <span>hoặc tải file của bạn</span>
+                </div>
+                
+                <div class="upload-controls">
+                    <label for="file-input" class="upload-btn">
+                        📁 Chọn file từ vựng
+                    </label>
+                    <input type="file" id="file-input" accept=".txt" class="file-input">
+                </div>
+            </div>
+        </div>
 
-    <section id="quiz" class="view" aria-live="polite" aria-labelledby="quiz-title">
-      <div class="quiz-top"><button class="icon-button" id="back-button" aria-label="Back to quizzes">←</button><div class="progress-wrap"><div class="progress"><span id="progress-bar"></span></div><small id="progress-label">1 / 10</small></div><button class="icon-button" id="pause-button" aria-label="Pause quiz">Ⅱ</button></div>
-      <div class="quiz-card"><p class="eyebrow" id="quiz-category">QUIZ</p><p class="question-label">What does this mean?</p><h2 id="quiz-title">hello</h2><p id="quiz-subtitle" class="pronunciation"></p></div>
-      <div id="answers" class="answers"></div>
-      <div id="feedback" class="feedback" role="status"></div>
-      <button class="secondary full" id="next-button" hidden>Continue <span>→</span></button>
-    </section>
+        <!-- Progress Bar -->
+        <div class="progress-container" id="progress-container" style="display: none;">
+            <div class="lesson-info">
+                <h3 id="current-lesson-title">Bài học</h3>
+                <div class="lesson-stats">
+                    <span id="lesson-completion-count" class="completion-count">Lần thứ 1</span>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+            <div class="progress-stats">
+                <span id="progress-text">Đang tải...</span>
+                <span id="remaining-count" class="remaining-count">0 còn lại</span>
+            </div>
+        </div>
 
-    <section id="complete" class="view complete-view" aria-labelledby="complete-title"><div class="complete-card"><div class="complete-icon">✦</div><p class="eyebrow">QUIZ COMPLETE</p><h1 id="complete-title">You did it.</h1><p id="complete-copy">A little practice goes a long way.</p><div class="score"><strong id="score-value">0%</strong><span>accuracy</span></div><div class="complete-actions"><button class="primary full" id="retry-button">Try again <span>↻</span></button><button class="secondary full" id="library-button">Back to quizzes</button></div></div></section>
-  </main>
-  <script src="script.js"></script>
+        <!-- Learning Interface -->
+        <div class="learning-interface" id="learning-interface" style="display: none;">
+            <!-- Word Display -->
+            <div class="word-card">
+                <div class="word-status">
+                    <span id="word-type" class="word-type">Từ mới</span>
+                </div>
+                <div class="english-word">
+                    <h2 id="target-word">LOADING</h2>
+                </div>
+                <p class="instruction">Chọn nghĩa tiếng Việt đúng</p>
+            </div>
+
+            <!-- Options Grid -->
+            <div class="options-container">
+                <div id="options-grid" class="options-grid">
+                    <!-- 6 options will be generated here -->
+                </div>
+            </div>
+
+            <!-- Feedback Area -->
+            <div class="feedback-container" id="feedback-container">
+                <div id="feedback-message" class="feedback-message"></div>
+                <div id="correct-answer" class="correct-answer"></div>
+            </div>
+        </div>
+
+        <!-- Completion Modal -->
+        <div class="completion-overlay" id="completion-modal" style="display: none;">
+            <div class="completion-card">
+                <div class="completion-icon">🎉</div>
+                <h2>Xuất sắc!</h2>
+                <p id="completion-message">Bạn đã hoàn thành bài học!</p>
+                
+                <div class="final-stats">
+                    <div class="stat-row">
+                        <span class="stat-label">Tổng từ vựng:</span>
+                        <span id="final-total" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Tổng lần thử:</span>
+                        <span id="final-attempts" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Độ chính xác:</span>
+                        <span id="final-accuracy" class="stat-value">0%</span>
+                    </div>
+                    <div class="stat-row highlight">
+                        <span class="stat-label">Lần hoàn thành:</span>
+                        <span id="final-completion-count" class="stat-value">1</span>
+                    </div>
+                </div>
+                
+                <div class="completion-actions">
+                    <button id="restart-learning" class="action-btn secondary">
+                        🔄 Học lại bài này
+                    </button>
+                    <button id="back-to-lessons-modal" class="action-btn primary">
+                        📚 Chọn bài khác
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Buttons -->
+        <div class="control-panel" id="control-panel" style="display: none;">
+            <button id="pause-learning" class="control-btn pause-btn">
+                ⏸️ Tạm dừng
+            </button>
+            <button id="restart-session" class="control-btn restart-btn">
+                🔄 Bắt đầu lại
+            </button>
+        </div>
+
+        <!-- Bottom Info -->
+        <div class="bottom-info">
+            <div class="info-card">
+                <h3>💡 Cách học hiệu quả</h3>
+                <ul>
+                    <li>Chọn bài học phù hợp với trình độ</li>
+                    <li>Từ trả lời đúng sẽ không xuất hiện lại</li>
+                    <li>Từ trả lời sai sẽ được lặp lại sau</li>
+                    <li>Luyện tập nhiều lần để ghi nhớ tốt hơn</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>

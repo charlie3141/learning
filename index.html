@@ -31,8 +31,26 @@
             </div>
 
             <div class="lessons-container">
-                <div class="lessons-grid" id="lessons-grid">
-                    <!-- Lessons will be loaded here -->
+                <!-- User Created Quizzes Section -->
+                <div class="user-quizzes-section">
+                    <div class="section-header">
+                        <h3>📝 Bài học của bạn</h3>
+                        <button id="show-create-form" class="create-btn">➕ Tạo bài học mới</button>
+                    </div>
+                    <div id="user-lessons-grid" class="lessons-grid">
+                        <!-- User lessons will be loaded here -->
+                    </div>
+                    <div id="no-user-lessons" class="no-user-lessons" style="display: none;">
+                        <p>Bạn chưa tạo bài học nào. Nhấn nút trên để tạo bài học đầu tiên!</p>
+                    </div>
+                </div>
+
+                <!-- Public Lessons Section -->
+                <div class="public-lessons-section">
+                    <h3 class="section-title">📖 Bài học có sẵn</h3>
+                    <div id="lessons-grid" class="lessons-grid">
+                        <!-- Public lessons loaded here -->
+                    </div>
                 </div>
                 
                 <div class="loading-lessons" id="loading-lessons">
@@ -57,6 +75,27 @@
                         📁 Chọn file từ vựng
                     </label>
                     <input type="file" id="file-input" accept=".txt" class="file-input">
+                </div>
+            </div>
+
+            <!-- Create Quiz Modal -->
+            <div id="create-quiz-modal" class="modal-overlay" style="display: none;">
+                <div class="modal-content">
+                    <h2>Tạo bài học từ vựng</h2>
+                    <div class="form-group">
+                        <label for="quiz-name">Tên bài học</label>
+                        <input type="text" id="quiz-name" placeholder="Nhập tên bài học...">
+                    </div>
+                    <div class="form-group">
+                        <label for="quiz-content">Từ vựng (mỗi dòng: english - vietnamese)</label>
+                        <textarea id="quiz-content" rows="8" placeholder="apple - quả táo
+banana - quả chuối
+..."></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button id="save-quiz" class="action-btn primary">Lưu bài học</button>
+                        <button id="cancel-quiz" class="action-btn secondary">Hủy</button>
+                    </div>
                 </div>
             </div>
         </div>
